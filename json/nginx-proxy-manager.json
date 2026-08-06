@@ -1,0 +1,45 @@
+{
+  "name": "Nginx Proxy Manager",
+  "slug": "nginx-proxy-manager",
+  "categories": [
+    2
+  ],
+  "date_created": "2026-08-06",
+  "type": "ct",
+  "updateable": true,
+  "privileged": false,
+  "interface_port": 81,
+  "documentation": "https://github.com/ImmacularIT/Proxmox-LXC-Nginx-Proxy-Manager",
+  "website": "https://github.com/NginxProxyManager/nginx-proxy-manager",
+  "logo": "https://nginxproxymanager.com/github.png",
+  "config_path": "/etc/nginx-proxy-manager/environment",
+  "description": "An unofficial native Debian 13 Proxmox LXC adaptation of the officially Docker-based Nginx Proxy Manager application. It builds the pinned official source and OpenResty environment without installing a nested container runtime.",
+  "install_methods": [
+    {
+      "type": "default",
+      "script": "ct/nginx-proxy-manager.sh",
+      "resources": {
+        "cpu": 2,
+        "ram": 4096,
+        "hdd": 16,
+        "os": "debian",
+        "version": "13"
+      }
+    }
+  ],
+  "notes": [
+    {
+      "type": "warning",
+      "text": "Development status: the native LXC installation and runtime test matrix have not yet been validated on Proxmox. Use only in a disposable test container with a snapshot."
+    },
+    {
+      "type": "info",
+      "text": "The administration interface is on port 81. HTTP and HTTPS proxy traffic use ports 80 and 443. The internal backend port 3000 and SQLite database remain local to the container."
+    },
+    {
+      "type": "info",
+      "text": "Nginx Proxy Manager v2.15.1 uses a first-run setup wizard when no administrator exists. This adaptation does not create or display default credentials."
+    }
+  ],
+  "repository_url": "https://github.com/ImmacularIT/Proxmox-LXC-Nginx-Proxy-Manager"
+}

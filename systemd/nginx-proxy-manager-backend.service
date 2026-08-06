@@ -1,0 +1,39 @@
+[Unit]
+Description=Nginx Proxy Manager backend API
+Documentation=https://github.com/NginxProxyManager/nginx-proxy-manager
+Wants=network-online.target
+After=network-online.target
+Before=nginx-proxy-manager-nginx.service
+
+[Service]
+Type=simple
+User=npm
+Group=npm
+WorkingDirectory=/opt/nginx-proxy-manager/current
+EnvironmentFile=/etc/nginx-proxy-manager/environment
+ExecStartPre=+/usr/local/sbin/npm-lxc-prepare
+ExecStart=/usr/bin/node --abort_on_uncaught_exception --max_old_space_size=250 index.js
+Restart=on-failure
+RestartSec=2s
+TimeoutStartSec=180s
+TimeoutStopSec=30s
+KillSignal=SIGTERM
+UMask=0027
+NoNewPrivileges=true
+PrivateDevices=true
+PrivateTmp=true
+RuntimeDirectory=nginx
+RuntimeDirectoryMode=0750
+RuntimeDirectoryPreserve=yes
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+ReadWritePaths=/data /etc/letsencrypt /etc/nginx/conf.d /etc/nginx-proxy-manager /run/nginx /var/backups/nginx-proxy-manager /var/lib/nginx /var/lib/logrotate /var/cache/nginx /var/log/nginx /opt/certbot
+
+[Install]
+WantedBy=multi-user.target

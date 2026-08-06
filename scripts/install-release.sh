@@ -1,0 +1,104 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+LIB_DIR="${NPM_LXC_LIB_DIR:-/usr/local/lib/npm-lxc}"
+if [[ -r "$LIB_DIR/versions.sh" ]]; then
+  # shellcheck source=/dev/null
+  source "$LIB_DIR/versions.sh"
+else
+  SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+  # shellcheck source=../lib/versions.sh
+  source "$SCRIPT_DIR/../lib/versions.sh"
+fi
+
+RELEASE_ROOT="${RELEASE_ROOT:-/opt/nginx-proxy-manager/releases}"
+BUILD_ROOT="${BUILD_ROOT:-/var/tmp/npm-native-build}"
+SOURCE_DIR="$BUILD_ROOT/nginx-proxy-manager-${NPM_VERSION}"
+STAGING_DIR="$RELEASE_ROOT/.${NPM_VERSION}.staging"
+FINAL_DIR="$RELEASE_ROOT/${NPM_VERSION}"
+
+clone_exact() {
+  local repo="$1" commit="$2" dest="$3"
+  rm -rf "$dest"
+  git init -q "$dest"
+  git -C "$dest" remote add origin "$repo"
+  git -C "$dest" fetch -q --depth 1 origin "$commit"
+  git -C "$dest" checkout -q --detach FETCH_HEAD
+  local actual
+  actual="$(git -C "$dest" rev-parse HEAD)"
+  [[ "$actual" == "$commit" ]] || {
+    echo "Expected ${commit}; fetched ${actual}" >&2
+    exit 1
+  }
+}
+
+verify_blob() {
+  local path="$1" expected="$2" actual
+  actual="$(git -C "$SOURCE_DIR" hash-object "$SOURCE_DIR/$path")"
+  [[ "$actual" == "$expected" ]] || {
+    echo "Upstream marker changed: ${path} (${actual}, expected ${expected})" >&2
+    exit 1
+  }
+}
+
+[[ "$(id -u)" -eq 0 ]] || { echo "Run as root" >&2; exit 1; }
+[[ "$(node --version)" == v${NODE_MAJOR}.* ]] || {
+  echo "Node.js ${NODE_MAJOR}.x is required" >&2
+  exit 1
+}
+[[ "$(yarn --version)" == "$YARN_VERSION" ]] || {
+  echo "Yarn ${YARN_VERSION} is required" >&2
+  exit 1
+}
+
+mkdir -p "$RELEASE_ROOT" "$BUILD_ROOT"
+clone_exact "$NPM_REPOSITORY" "$NPM_COMMIT" "$SOURCE_DIR"
+[[ "$(<"$SOURCE_DIR/.version")" == "$NPM_VERSION" ]] || {
+  echo "Release marker does not match ${NPM_VERSION}" >&2
+  exit 1
+}
+verify_blob docker/Dockerfile "$NPM_DOCKERFILE_BLOB"
+verify_blob backend/package.json "$NPM_BACKEND_PACKAGE_BLOB"
+verify_blob backend/yarn.lock "$NPM_BACKEND_LOCK_BLOB"
+verify_blob frontend/package.json "$NPM_FRONTEND_PACKAGE_BLOB"
+verify_blob frontend/yarn.lock "$NPM_FRONTEND_LOCK_BLOB"
+verify_blob docker/rootfs/etc/nginx/nginx.conf "$NPM_NGINX_CONFIG_BLOB"
+
+export NODE_OPTIONS="--openssl-legacy-provider"
+
+pushd "$SOURCE_DIR/frontend" >/dev/null
+NODE_ENV=development yarn install --frozen-lockfile --non-interactive --production=false
+NODE_ENV=production yarn build
+[[ -f dist/index.html ]] || { echo "Frontend build did not create dist/index.html" >&2; exit 1; }
+popd >/dev/null
+
+pushd "$SOURCE_DIR/backend" >/dev/null
+NODE_ENV=production yarn install --frozen-lockfile --non-interactive --production=true
+[[ -f index.js && -d node_modules ]] || { echo "Backend dependency installation failed" >&2; exit 1; }
+popd >/dev/null
+
+rm -rf "$STAGING_DIR"
+install -d -m 0755 "$STAGING_DIR"
+rsync -a --delete \
+  --exclude='.git' \
+  --exclude='test' \
+  "$SOURCE_DIR/backend/" "$STAGING_DIR/"
+install -d -m 0755 "$STAGING_DIR/frontend"
+rsync -a --delete "$SOURCE_DIR/frontend/dist/" "$STAGING_DIR/frontend/"
+install -d -m 0755 "$STAGING_DIR/share/upstream-rootfs"
+rsync -a "$SOURCE_DIR/docker/rootfs/" "$STAGING_DIR/share/upstream-rootfs/"
+
+printf '%s\n' "$NPM_RELEASE" >"$STAGING_DIR/.upstream-release"
+printf '%s\n' "$NPM_COMMIT" >"$STAGING_DIR/.upstream-commit"
+printf '%s\n' "$NPM_BASE_COMMIT" >"$STAGING_DIR/.upstream-base-commit"
+printf '%s\n' "$ADAPTATION_VERSION" >"$STAGING_DIR/.adaptation-version"
+chmod -R u+rwX,go+rX,go-w "$STAGING_DIR"
+chown -R root:npm "$STAGING_DIR"
+
+if [[ -e "$FINAL_DIR" ]]; then
+  echo "Release directory already exists: ${FINAL_DIR}" >&2
+  rm -rf "$STAGING_DIR"
+  exit 1
+fi
+mv "$STAGING_DIR" "$FINAL_DIR"
+printf '%s\n' "$FINAL_DIR"
