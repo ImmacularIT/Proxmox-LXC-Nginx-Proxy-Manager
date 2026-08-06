@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
+trap 'rc=$?; echo "Upstream verification failed at line ${LINENO}: ${BASH_COMMAND}" >&2; exit "$rc"' ERR
 
 ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 # shellcheck source=../lib/versions.sh
@@ -59,7 +60,7 @@ verify_base_blob scripts/build-openresty.sh "$NPM_BASE_BUILD_OPENRESTY_BLOB"
 verify_base_blob scripts/install-openresty.sh "$NPM_BASE_INSTALL_OPENRESTY_BLOB"
 
 grep -F 'FROM debian:trixie-slim' "$tmp/base/docker/Dockerfile" >/dev/null
-grep -F 'node_22.x' "$tmp/base/docker/Dockerfile.certbot-node" >/dev/null
+grep -F 'https://deb.nodesource.com/setup_22.x' "$tmp/base/docker/Dockerfile.certbot-node" >/dev/null
 grep -F -- '--with-http_v3_module' "$tmp/base/scripts/build-openresty.sh" >/dev/null
 grep -F -- '--with-stream' "$tmp/base/scripts/build-openresty.sh" >/dev/null
 
