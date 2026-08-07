@@ -66,8 +66,15 @@ The host launcher is project-owned and uses Proxmox's own `pct`, `pveam`,
 `pvesm`, and `pvesh` commands directly. It does not load an unrelated script
 framework and does not send installation telemetry or usage data.
 
-Default Install prompts for container storage, template storage, container ID,
-hostname, bridge, DHCP or static IPv4, static gateway, and optional VLAN.
+Default Install prompts for container ID, hostname, LXC root-disk storage,
+bridge, DHCP or static IPv4, static gateway, and optional VLAN. Debian template
+cache placement is handled automatically: the launcher first reuses an active
+`vztmpl` storage that already contains a Debian 13 AMD64 template, otherwise it
+prefers Proxmox's conventional `local` storage, then the first active
+`vztmpl`-capable storage. Administrators can override this internal choice with
+`NPM_TEMPLATE_STORAGE=<storage>` when launching the script; it is not exposed as
+a normal installer dialog.
+
 Advanced Install additionally allows CPU, RAM, disk, and an explicit
 nesting/keyctl toggle. Nesting is disabled by default and is not required by
 Nginx Proxy Manager.
@@ -149,8 +156,8 @@ and retains rollback guidance and the backup path.
 Repository checks cover Bash and JSON syntax, systemd units, required metadata,
 version pins, Docker-derived source markers, branding PNG signatures, forbidden
 nested-runtime installation commands, moving upstream branch URLs, explicit
-no-telemetry launcher/installer invariants, and obvious private-key or token
-patterns.
+no-telemetry launcher/installer invariants, automatic template-storage handling,
+and obvious private-key or token patterns.
 
 Real Proxmox validation has now reached a passing native service stack: backend
 and OpenResty are active, ports 3000/80/81/443 listen, port 81 returns HTTP 200,
