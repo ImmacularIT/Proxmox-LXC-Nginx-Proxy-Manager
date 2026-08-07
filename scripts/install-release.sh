@@ -88,6 +88,10 @@ popd >/dev/null
 pushd "$SOURCE_DIR/backend" >/dev/null
 NODE_ENV=production yarn install --frozen-lockfile --non-interactive --production=true
 [[ -f index.js && -d node_modules ]] || { echo "Backend dependency installation failed" >&2; exit 1; }
+# Peer/type-package warnings from Yarn do not prove runtime breakage. The
+# initial supported database is SQLite, so directly load the native binding
+# under the exact Node.js runtime before accepting the release.
+NODE_ENV=production node --input-type=module -e "await import('better-sqlite3')"
 popd >/dev/null
 
 rm -rf "$STAGING_DIR"
