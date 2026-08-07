@@ -106,6 +106,17 @@ for helper_name in ["build-openresty-native.sh", "install-release.sh"]:
     assert 'if [[ -r "$LIB_DIR/versions.sh" ]]' in helper, (
         f"Installed versions manifest guard missing from {helper_name}"
     )
+    assert "export LANG=C.UTF-8" in helper and "export LC_ALL=C.UTF-8" in helper, (
+        f"Neutral UTF-8 build locale missing from {helper_name}"
+    )
+
+install_release = (ROOT / "scripts/install-release.sh").read_text()
+assert "yarn locale-compile" in install_release, "Official frontend locale compilation step missing"
+assert install_release.index("yarn locale-compile") < install_release.index("NODE_ENV=production yarn build"), (
+    "Frontend locales must be compiled before the production frontend build"
+)
+assert "src/locale/lang/en.json" in install_release
+assert "src/locale/lang/lang-list.json" in install_release
 
 production_shell = "\n".join(
     p.read_text(errors="replace")
