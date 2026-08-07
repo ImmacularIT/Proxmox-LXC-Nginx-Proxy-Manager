@@ -4,18 +4,13 @@
 # Native Debian 13 LXC adaptation of the official Docker-based Nginx Proxy Manager application.
 set -Eeuo pipefail
 
-if [[ -n "${FUNCTIONS_FILE_PATH:-}" ]]; then
-  # shellcheck disable=SC1090
-  source /dev/stdin <<<"$FUNCTIONS_FILE_PATH"
-  color
-  verb_ip6
-  catch_errors
-  setting_up_container
-  network_check
-  update_os
-fi
+# Build tools such as Perl must always see an installed UTF-8 locale. This is
+# deliberately process-local and does not replace the user's regional locale
+# or timezone configuration inside Proxmox.
+export LANG=C.UTF-8
+export LC_ALL=C.UTF-8
+export DEBIAN_FRONTEND=noninteractive
 
-: "${STD:=}"
 PROJECT_OWNER="ImmacularIT"
 PROJECT_REPO="Proxmox-LXC-Nginx-Proxy-Manager"
 PROJECT_REF="${NPM_PROJECT_REF:-develop/native-lxc-v2.15.1}"
@@ -28,9 +23,12 @@ EXPECTED_CRYPTOGRAPHY_VERSION="48.0.0"
 LIB_DIR="/usr/local/lib/npm-lxc"
 BUILD_ROOT="/var/tmp/npm-native-build"
 
-info() { if declare -F msg_info >/dev/null; then msg_info "$1"; else printf '==> %s\n' "$1"; fi; }
-ok() { if declare -F msg_ok >/dev/null; then msg_ok "$1"; else printf 'OK: %s\n' "$1"; fi; }
-fatal() { if declare -F msg_error >/dev/null; then msg_error "$1"; else printf 'ERROR: %s\n' "$1" >&2; fi; exit 1; }
+# Keep the status label visibly separated from the command output even on a
+# monochrome terminal. The next command's first line intentionally follows the
+# colon on the same line where possible.
+info() { printf '\n  ⏳ %s: ' "${1%:}"; }
+ok() { printf '\n  ✔️  %s\n' "$1"; }
+fatal() { printf '\n  ✖️  %s\n' "$1" >&2; exit 1; }
 
 project_download() {
   local destination path url
@@ -38,12 +36,17 @@ project_download() {
   path="$2"
   url="${PROJECT_RAW}/${path}"
   install -d -m 0755 "$(dirname "$destination")"
-  if declare -F curl_download >/dev/null; then
-    curl_download "$destination" "$url"
-  else
-    curl -fsSL --retry 3 --retry-delay 2 -o "$destination" "$url"
-  fi
+  curl -fsSL --retry 3 --retry-delay 2 -o "$destination" "$url"
   [[ -s "$destination" ]] || fatal "Downloaded an empty project file: ${path}"
+}
+
+service_diagnostics() {
+  local unit="$1"
+  printf '\n\n--- %s status ---\n' "$unit" >&2
+  systemctl status "$unit" --no-pager -l >&2 || true
+  printf '\n--- %s journal ---\n' "$unit" >&2
+  journalctl -u "$unit" -b --no-pager -n 120 >&2 || true
+  printf '%s\n' '----------------------------------------' >&2
 }
 
 [[ "$(id -u)" -eq 0 ]] || fatal "The container installer must run as root"
@@ -55,9 +58,19 @@ case "$(dpkg --print-architecture)" in
   *) fatal "Unsupported architecture: $(dpkg --print-architecture)" ;;
 esac
 
+info "Checking required project and upstream DNS"
+for host in github.com raw.githubusercontent.com deb.nodesource.com openresty.org luarocks.org; do
+  getent ahosts "$host" >/dev/null 2>&1 || fatal "DNS resolution failed for ${host}"
+done
+ok "Required project and upstream DNS is reachable"
+
+info "Updating Container OS"
+apt-get update
+apt-get -y dist-upgrade
+ok "Updated Container OS"
+
 info "Installing native build and runtime dependencies"
-$STD apt-get update
-$STD apt-get install -y --no-install-recommends \
+apt-get install -y --no-install-recommends \
   apache2-utils apt-transport-https build-essential ca-certificates cargo curl dos2unix gettext git gnupg jq \
   libaugeas0 libffi-dev liblua5.1-0-dev libmaxminddb-dev libncurses-dev libpcre2-dev \
   libreadline-dev libssl-dev logrotate lua5.1 moreutils openssl pkg-config procps \
@@ -85,8 +98,8 @@ Components: main
 Architectures: ${node_arch}
 Signed-By: /etc/apt/keyrings/nodesource.gpg
 NODE_REPO
-$STD apt-get update
-$STD apt-get install -y nodejs
+apt-get update
+apt-get install -y nodejs
 npm install --global yarn@1.22.22
 [[ "$(node --version)" == v22.* ]] || fatal "Node.js 22 validation failed"
 [[ "$(yarn --version)" == "1.22.22" ]] || fatal "Yarn validation failed"
@@ -214,7 +227,10 @@ chmod 0600 /etc/nginx-proxy-manager/installation.json
 ok "Created protected native configuration"
 
 info "Starting native services"
-systemctl start nginx-proxy-manager-backend.service
+if ! systemctl start nginx-proxy-manager-backend.service; then
+  service_diagnostics nginx-proxy-manager-backend.service
+  fatal "Backend service failed to start"
+fi
 backend_ready=0
 for _ in {1..180}; do
   if ss -ltnH 'sport = :3000' | grep -q .; then
@@ -222,23 +238,25 @@ for _ in {1..180}; do
     break
   fi
   if ! systemctl is-active --quiet nginx-proxy-manager-backend.service; then
-    journalctl -u nginx-proxy-manager-backend.service --no-pager -n 100 >&2 || true
+    service_diagnostics nginx-proxy-manager-backend.service
     fatal "Backend service exited during startup"
   fi
   sleep 1
 done
-[[ "$backend_ready" -eq 1 ]] || fatal "Backend did not listen on port 3000"
-systemctl start nginx-proxy-manager-nginx.service
+if [[ "$backend_ready" -ne 1 ]]; then
+  service_diagnostics nginx-proxy-manager-backend.service
+  fatal "Backend did not listen on port 3000"
+fi
+if ! systemctl start nginx-proxy-manager-nginx.service; then
+  service_diagnostics nginx-proxy-manager-nginx.service
+  fatal "Nginx service failed to start"
+fi
 /usr/local/sbin/npm-lxc-healthcheck
 ok "Started native Nginx Proxy Manager services"
 
 rm -rf "$BUILD_ROOT"
 apt-get clean
 rm -rf /var/lib/apt/lists/*
-
-if declare -F motd_ssh >/dev/null; then motd_ssh; fi
-if declare -F customize >/dev/null; then customize; fi
-if declare -F cleanup_lxc >/dev/null; then cleanup_lxc; fi
 
 echo
 echo "Nginx Proxy Manager ${NPM_RELEASE} is installed natively without a nested container runtime."
