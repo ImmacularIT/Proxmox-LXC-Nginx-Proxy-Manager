@@ -26,7 +26,7 @@ DEFAULT_TAGS="nginx-proxy-manager;reverse-proxy;immacularit;webserver"
 CTID=""
 HN=""
 ROOT_STORAGE=""
-TEMPLATE_STORAGE=""
+TEMPLATE_STORAGE="${NPM_TEMPLATE_STORAGE:-}"
 BRG="$DEFAULT_BRIDGE"
 NET="dhcp"
 GATE=""
@@ -69,8 +69,8 @@ PVE_VERSION="$(printf '%s' "$PVE_RAW" | awk -F'/' '{print $2}' | awk -F'-' '{pri
 show_welcome() {
   whiptail --backtitle "$BACKTITLE" --title "WELCOME" \
     --ok-button "Continue" \
-    --msgbox "\nThis independent ImmacularIT installer creates an unprivileged Debian 13 LXC and installs Nginx Proxy Manager natively.\n\nThe final container does not require Docker, Podman, Kubernetes, or another nested container runtime.\n\nYou will be able to review the complete container configuration before anything is created.\n\nNo installation telemetry or usage data is sent by this launcher." \
-    19 78
+    --msgbox "\nThis independent ImmacularIT installer creates an unprivileged Debian 13 LXC and installs Nginx Proxy Manager natively.\n\nThe final container does not require Docker, Podman, Kubernetes, or another nested container runtime.\n\nDefault Install asks only for user-facing container choices. Debian template storage is selected automatically by the launcher.\n\nYou can review the complete container configuration before anything is created.\n\nNo installation telemetry or usage data is sent by this launcher." \
+    21 78
 }
 
 valid_container_id() {
@@ -92,7 +92,7 @@ valid_hostname() {
 }
 
 valid_ipv4() {
-  local ip="$1" a b c d
+  local ip="$1" a b c d n
   IFS='.' read -r a b c d <<<"$ip"
   [[ -n "${a:-}" && -n "${b:-}" && -n "${c:-}" && -n "${d:-}" ]] || return 1
   for n in "$a" "$b" "$c" "$d"; do
@@ -137,19 +137,56 @@ valid_vlan() {
 }
 
 select_storage() {
-  local content="$1" title="$2" selected default_storage
+  local selected default_storage
   local -a stores=() menu=()
-  mapfile -t stores < <(pvesm status --content "$content" 2>/dev/null | awk 'NR > 1 && $3 == "active" {print $1}')
-  [[ ${#stores[@]} -gt 0 ]] || fatal "No active Proxmox storage supports content type ${content}"
+  mapfile -t stores < <(pvesm status --content rootdir 2>/dev/null | awk 'NR > 1 && $3 == "active" {print $1}')
+  [[ ${#stores[@]} -gt 0 ]] || fatal "No active Proxmox storage supports LXC root disks"
   default_storage="${stores[0]}"
   for selected in "${stores[@]}"; do
-    menu+=("$selected" "Active ${content} storage")
+    menu+=("$selected" "Active container storage")
   done
-  selected=$(whiptail --backtitle "$BACKTITLE" --title "$title" \
-    --ok-button "Select" --cancel-button "Exit" \
-    --menu "\nSelect storage:" 18 72 10 "${menu[@]}" \
+  selected=$(whiptail --backtitle "$BACKTITLE" --title "STORAGE" \
+    --ok-button "Next" --cancel-button "Exit Script" \
+    --menu "\nSelect storage for the LXC root disk:" 18 72 10 "${menu[@]}" \
     --default-item "$default_storage" 3>&1 1>&2 2>&3) || exit 0
   printf '%s' "$selected"
+}
+
+resolve_template_storage() {
+  local requested="${TEMPLATE_STORAGE:-}" storage
+  local -a stores=()
+  mapfile -t stores < <(pvesm status --content vztmpl 2>/dev/null | awk 'NR > 1 && $3 == "active" {print $1}')
+  [[ ${#stores[@]} -gt 0 ]] || fatal "No active Proxmox storage supports container templates (vztmpl)"
+
+  if [[ -n "$requested" ]]; then
+    for storage in "${stores[@]}"; do
+      if [[ "$storage" == "$requested" ]]; then
+        printf '%s' "$storage"
+        return 0
+      fi
+    done
+    fatal "Requested template storage is not active or does not support vztmpl: ${requested}"
+  fi
+
+  # Prefer an active storage that already has a Debian 13 AMD64 template so
+  # normal runs do not redownload or expose template-cache placement to users.
+  for storage in "${stores[@]}"; do
+    if pveam list "$storage" 2>/dev/null \
+      | awk '$1 ~ /debian-13-standard_.*_amd64\.tar\.zst$/ {found=1} END {exit !found}'; then
+      printf '%s' "$storage"
+      return 0
+    fi
+  done
+
+  # `local` is Proxmox's conventional template/cache storage. If it is not
+  # available, use the first active vztmpl-capable storage deterministically.
+  for storage in "${stores[@]}"; do
+    if [[ "$storage" == "local" ]]; then
+      printf '%s' "$storage"
+      return 0
+    fi
+  done
+  printf '%s' "${stores[0]}"
 }
 
 select_bridge() {
@@ -163,10 +200,14 @@ select_bridge() {
   done
   [[ ${#bridges[@]} -gt 0 ]] || fatal "No Proxmox network bridge was found"
   for bridge in "${bridges[@]}"; do
-    menu+=("$bridge" "Available bridge")
+    if [[ "$bridge" == "$DEFAULT_BRIDGE" ]]; then
+      menu+=("$bridge" "Current default")
+    else
+      menu+=("$bridge" "Available bridge")
+    fi
   done
   selected=$(whiptail --backtitle "$BACKTITLE" --title "NETWORK BRIDGE" \
-    --ok-button "Select" --cancel-button "Exit" \
+    --ok-button "Next" --cancel-button "Exit Script" \
     --menu "\nSelect the bridge for this container:" 18 72 10 "${menu[@]}" \
     --default-item "$DEFAULT_BRIDGE" 3>&1 1>&2 2>&3) || exit 0
   printf '%s' "$selected"
@@ -177,19 +218,21 @@ prompt_identity() {
   suggested="$(pvesh get /cluster/nextid 2>/dev/null)"
   while true; do
     id=$(whiptail --backtitle "$BACKTITLE" --title "CONTAINER ID" \
-      --inputbox "\nEnter an unused Proxmox container ID." 10 62 "$suggested" \
+      --ok-button "Next" --cancel-button "Exit Script" \
+      --inputbox "\nContainer ID\n\nPress Enter to use the suggested ID." 12 62 "$suggested" \
       3>&1 1>&2 2>&3) || exit 0
     if valid_container_id "$id"; then CTID="$id"; break; fi
     whiptail --backtitle "$BACKTITLE" --title "INVALID CONTAINER ID" --msgbox "Container ID must be numeric and unused across the cluster." 9 62
   done
   while true; do
-    name=$(whiptail --backtitle "$BACKTITLE" --title "CONTAINER HOSTNAME" \
-      --inputbox "\nEnter the container hostname." 10 62 "$DEFAULT_HOSTNAME" \
+    name=$(whiptail --backtitle "$BACKTITLE" --title "CONTAINER NAME" \
+      --ok-button "Next" --cancel-button "Exit Script" \
+      --inputbox "\nContainer name\n\nPress Enter to use the suggested name." 12 66 "$DEFAULT_HOSTNAME" \
       3>&1 1>&2 2>&3) || exit 0
     name="${name,,}"
     name="${name// /}"
     if valid_hostname "$name"; then HN="$name"; break; fi
-    whiptail --backtitle "$BACKTITLE" --title "INVALID HOSTNAME" --msgbox "Use lowercase letters, numbers, dots and hyphens only." 9 62
+    whiptail --backtitle "$BACKTITLE" --title "INVALID CONTAINER NAME" --msgbox "Use lowercase letters, numbers, dots and hyphens only. Labels cannot start or end with a hyphen." 10 66
   done
 }
 
@@ -197,20 +240,23 @@ prompt_network() {
   local method static_ip gateway vlan
   BRG="$(select_bridge)"
   method=$(whiptail --backtitle "$BACKTITLE" --title "IPv4" \
-    --menu "\nChoose IPv4 configuration:" 14 68 2 \
-    "dhcp" "Automatic address from DHCP" \
+    --ok-button "Next" --cancel-button "Exit Script" \
+    --menu "\nChoose how the container receives its IPv4 address:" 15 68 2 \
+    "dhcp" "Automatic address from DHCP (recommended)" \
     "static" "Static IPv4 address" \
     --default-item "dhcp" 3>&1 1>&2 2>&3) || exit 0
   if [[ "$method" == "static" ]]; then
     while true; do
       static_ip=$(whiptail --backtitle "$BACKTITLE" --title "STATIC IPv4" \
-        --inputbox "\nEnter IPv4 address in CIDR form, e.g. 192.168.1.50/24" 11 68 "" \
+        --ok-button "Next" --cancel-button "Exit Script" \
+        --inputbox "\nEnter IPv4 address in CIDR form.\nExample: 192.168.1.50/24" 12 68 "" \
         3>&1 1>&2 2>&3) || exit 0
       valid_cidr "$static_ip" && break
       whiptail --backtitle "$BACKTITLE" --title "INVALID IPv4" --msgbox "Enter a valid IPv4 CIDR address." 9 58
     done
     while true; do
       gateway=$(whiptail --backtitle "$BACKTITLE" --title "IPv4 GATEWAY" \
+        --ok-button "Next" --cancel-button "Exit Script" \
         --inputbox "\nEnter the gateway for ${static_ip}." 10 62 "" \
         3>&1 1>&2 2>&3) || exit 0
       gateway_in_subnet "$static_ip" "$gateway" && break
@@ -224,6 +270,7 @@ prompt_network() {
   fi
   while true; do
     vlan=$(whiptail --backtitle "$BACKTITLE" --title "VLAN" \
+      --ok-button "Review" --cancel-button "Exit Script" \
       --inputbox "\nOptional VLAN tag (1-4094). Leave blank for untagged." 10 64 "" \
       3>&1 1>&2 2>&3) || exit 0
     valid_vlan "$vlan" && break
@@ -262,8 +309,7 @@ Install method: ${method^}
 Container ID: ${CTID}
 Hostname: ${HN}
 Container type: Unprivileged Debian 13
-Container storage: ${ROOT_STORAGE}
-Template storage: ${TEMPLATE_STORAGE}
+Storage: ${ROOT_STORAGE}
 Disk: ${DISK} GiB
 CPU: ${CPU} cores
 RAM: ${RAM} MiB
@@ -277,8 +323,8 @@ Create this container and begin the native installation?
 EOF_CONFIGURATION
 )
   whiptail --backtitle "$BACKTITLE" --title "REVIEW CONFIGURATION" \
-    --yes-button "Install" --no-button "Cancel" \
-    --yesno "$configuration" 23 78
+    --yes-button "Install" --no-button "Change / Cancel" \
+    --yesno "$configuration" 22 78
 }
 
 find_or_download_template() {
@@ -296,7 +342,7 @@ find_or_download_template() {
     | awk '$2 ~ /^debian-13-standard_.*_amd64\.tar\.zst$/ {print $2}' \
     | sort -V | tail -n1)
   [[ -n "$available" ]] || fatal "No Debian 13 AMD64 standard template is available from the Proxmox appliance catalog"
-  info "Downloading ${available} to ${TEMPLATE_STORAGE}"
+  info "Downloading ${available}"
   pveam download "$TEMPLATE_STORAGE" "$available"
   printf '%s:vztmpl/%s' "$TEMPLATE_STORAGE" "$available"
 }
@@ -357,11 +403,14 @@ method=$(whiptail --backtitle "$BACKTITLE" --title "INSTALL METHOD" \
   --default-item "default" 3>&1 1>&2 2>&3) || exit 0
 
 prompt_identity
-ROOT_STORAGE="$(select_storage rootdir "CONTAINER STORAGE")"
-TEMPLATE_STORAGE="$(select_storage vztmpl "TEMPLATE STORAGE")"
+ROOT_STORAGE="$(select_storage)"
 prompt_network
 [[ "$method" == "advanced" ]] && prompt_advanced_resources
 confirm_configuration || exit 0
+
+# Template cache placement is an implementation detail, not a normal user
+# choice. Resolve it only after the user has approved the actual CT settings.
+TEMPLATE_STORAGE="$(resolve_template_storage)"
 
 clear || true
 printf '  ⚙️  Using %s Install on node %s\n' "${method^}" "$(hostname)"
