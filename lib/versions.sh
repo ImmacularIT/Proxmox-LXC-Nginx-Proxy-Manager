@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Canonical, reviewable version pins for the native LXC adaptation.
 
-readonly ADAPTATION_VERSION="0.1.1-dev"
+readonly ADAPTATION_VERSION="0.1.2-dev"
 readonly NPM_RELEASE="v2.15.1"
 readonly NPM_VERSION="2.15.1"
 readonly NPM_COMMIT="76f09db610cfcaecf6d608a8947d6f75aa028870"
@@ -43,7 +43,4 @@ readonly CRYPTOGRAPHY_VERSION="48.0.0"
 readonly NODE_MAJOR="22"
 readonly YARN_VERSION="1.22.22"
 
-# Generic Proxmox LXC builder only. It is not an application source and this
-# repository is not an official Community Scripts project.
-readonly PVE_BUILD_COMMIT="5ddc4a2a41991324a534dd02b81fe3bc5a3bca04"
 readonly GUACAMOLE_BRANDING_COMMIT="15c268e6fd0e6f9b441aa9f785c278c3f580171b"
