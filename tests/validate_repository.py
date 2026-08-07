@@ -96,6 +96,7 @@ for marker in [
     "service_diagnostics",
     "export LANG=C.UTF-8",
     "export LC_ALL=C.UTF-8",
+    "service identity enforced by systemd",
 ]:
     assert marker in installer, f"Missing installer marker: {marker}"
 assert "FUNCTIONS_FILE_PATH" not in installer
@@ -195,6 +196,13 @@ for unit in (ROOT / "systemd").glob("*.service"):
     assert "ExecStartPre=+/usr/local/sbin/npm-lxc-prepare" in text
     assert "StartLimitIntervalSec=60" in text
     assert "StartLimitBurst=5" in text
+
+nginx_unit = (ROOT / "systemd/nginx-proxy-manager-nginx.service").read_text()
+assert "CacheDirectory=nginx/tmp" in nginx_unit, "Nginx private temp backing directory missing"
+assert "CacheDirectoryMode=0750" in nginx_unit
+assert "BindPaths=/var/cache/nginx/tmp:/tmp/nginx" in nginx_unit, (
+    "Official /tmp/nginx path must survive per-process systemd filesystem namespaces"
+)
 
 for path in ROOT.rglob("*"):
     if path.is_file() and ".git" not in path.parts:
