@@ -35,7 +35,6 @@ CPU="$DEFAULT_CPU"
 RAM="$DEFAULT_RAM"
 DISK="$DEFAULT_DISK"
 ONBOOT=1
-NESTING=0
 INSTALL_LOG=""
 
 info() { printf '\n  ⏳ %s: ' "${1%:}"; }
@@ -293,17 +292,10 @@ prompt_advanced_resources() {
     value=$(whiptail --backtitle "$BACKTITLE" --title "DISK" --inputbox "\nRoot disk size in GiB" 9 54 "$DISK" 3>&1 1>&2 2>&3) || exit 0
     [[ "$value" =~ ^[0-9]+$ ]] && (( value >= 8 )) && { DISK="$value"; break; }
   done
-  if whiptail --backtitle "$BACKTITLE" --title "NESTING" \
-    --yesno "\nEnable LXC nesting/keyctl?\n\nNginx Proxy Manager does not require this. Leave disabled unless you have a separate reason." 13 72; then
-    NESTING=1
-  else
-    NESTING=0
-  fi
 }
 
 confirm_configuration() {
-  local nesting_text configuration
-  nesting_text="$([[ "$NESTING" -eq 1 ]] && printf 'enabled' || printf 'disabled')"
+  local configuration
   configuration=$(cat <<EOF_CONFIGURATION
 Install method: ${method^}
 Container ID: ${CTID}
@@ -317,14 +309,13 @@ Bridge: ${BRG}
 IPv4: ${NET}
 Gateway: ${GATE:-DHCP/none}
 VLAN: ${VLAN:-none}
-Nesting/keyctl: ${nesting_text}
 
 Create this container and begin the native installation?
 EOF_CONFIGURATION
 )
   whiptail --backtitle "$BACKTITLE" --title "REVIEW CONFIGURATION" \
     --yes-button "Install" --no-button "Change / Cancel" \
-    --yesno "$configuration" 22 78
+    --yesno "$configuration" 21 78
 }
 
 find_or_download_template() {
@@ -399,7 +390,7 @@ show_welcome
 method=$(whiptail --backtitle "$BACKTITLE" --title "INSTALL METHOD" \
   --menu "\nChoose how to configure the Debian 13 unprivileged LXC:" 15 76 2 \
   "default" "Recommended defaults with identity/network prompts" \
-  "advanced" "Also customize CPU, RAM, disk and nesting" \
+  "advanced" "Also customize CPU, RAM and disk" \
   --default-item "default" 3>&1 1>&2 2>&3) || exit 0
 
 prompt_identity
@@ -425,7 +416,6 @@ printf '  🌉  Bridge: %s\n' "$BRG"
 printf '  📡  IPv4: %s\n' "$NET"
 printf '  🌐  Gateway: %s\n' "${GATE:-DHCP/none}"
 printf '  🏷️  VLAN: %s\n' "${VLAN:-none}"
-printf '  📦  Nesting/keyctl: %s\n' "$([[ "$NESTING" -eq 1 ]] && echo enabled || echo disabled)"
 
 TEMPLATE="$(find_or_download_template)"
 net0="name=eth0,bridge=${BRG},ip=${NET},ip6=auto,type=veth"
@@ -446,7 +436,6 @@ create_args=(
   --tags "$DEFAULT_TAGS"
   --start 0
 )
-[[ "$NESTING" -eq 1 ]] && create_args+=(--features "nesting=1,keyctl=1")
 
 info "Creating Debian 13 unprivileged LXC ${CTID}"
 pct create "${create_args[@]}"
