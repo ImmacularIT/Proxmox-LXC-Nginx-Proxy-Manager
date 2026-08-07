@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Canonical, reviewable version pins for the native LXC adaptation.
 
-readonly ADAPTATION_VERSION="0.1.0-dev"
+readonly ADAPTATION_VERSION="0.1.1-dev"
 readonly NPM_RELEASE="v2.15.1"
 readonly NPM_VERSION="2.15.1"
 readonly NPM_COMMIT="76f09db610cfcaecf6d608a8947d6f75aa028870"
@@ -34,6 +34,12 @@ readonly LUA_CJSON_ROCK="2.1.0.10-1"
 readonly LUA_RESTY_OPENIDC_ROCK="1.8.0-1"
 readonly LUA_RESTY_HTTP_ROCK="0.17.2-0"
 readonly CERTBOT_VERSION="5.6.0"
+# The pinned upstream Dockerfile currently combines pyOpenSSL 24.3.0 with
+# cryptography 48.0.0, whose declared dependency ranges conflict. The native
+# adaptation keeps upstream cryptography 48.0.0 and pins the first pyOpenSSL
+# release that explicitly supports cryptography 48.x.
+readonly PYOPENSSL_VERSION="26.2.0"
+readonly CRYPTOGRAPHY_VERSION="48.0.0"
 readonly NODE_MAJOR="22"
 readonly YARN_VERSION="1.22.22"
 
