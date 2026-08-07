@@ -66,7 +66,7 @@ Current runtime-validation instance:
 | SQLite database initializes | PASSED | 2026-08-07, CT 901: backend selected `/data/database.sqlite`, created the database and JWT keys successfully. |
 | Official migrations complete | PASSED | 2026-08-07, CT 901: official migration chain ran from database version `none` through the current schema before the backend began listening. |
 | Backend systemd startup | PASSED | Initial `ExecStartPre` failure rejected an intentionally empty custom Nginx include; fix `3d782a82f011f62e707666d7f81d4b1cabd4e17a` was installed from CI-validated code commit `1041ed5076d8584a62a3afd626ec1a0cd5245764`. Retest: prepare exited 0, service active/running, backend PID listening on port 3000. |
-| OpenResty systemd startup | NOT RUN | |
+| OpenResty systemd startup | FAILED - RETEST | 2026-08-07, CT 901: standalone `nginx -t` passed, but the systemd `ExecStartPre=/usr/sbin/nginx -t` failed because `PrivateTmp=true` gives each service command a separate filesystem namespace and `/tmp/nginx/body` did not survive from the previous pre-start command. Fix binds service-owned `/var/cache/nginx/tmp` to the official `/tmp/nginx` path while preserving `PrivateTmp=true`; code commit `ae201d1e78b04284821eaf8ed20fefe9b1ef8af9`. Retest pending. |
 | Restart policies recover processes | NOT RUN | |
 | Health helper passes | NOT RUN | |
 | Full container reboot survives | NOT RUN | |
