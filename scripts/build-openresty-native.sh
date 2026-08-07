@@ -1,9 +1,15 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-# shellcheck source=../lib/versions.sh
-source "${SCRIPT_DIR}/../lib/versions.sh"
+LIB_DIR="${NPM_LXC_LIB_DIR:-/usr/local/lib/npm-lxc}"
+if [[ -r "$LIB_DIR/versions.sh" ]]; then
+  # shellcheck source=/dev/null
+  source "$LIB_DIR/versions.sh"
+else
+  SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+  # shellcheck source=../lib/versions.sh
+  source "$SCRIPT_DIR/../lib/versions.sh"
+fi
 
 BUILD_ROOT="${BUILD_ROOT:-/var/tmp/npm-native-build}"
 OPENRESTY_JOBS="${OPENRESTY_JOBS:-$(nproc)}"
