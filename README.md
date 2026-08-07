@@ -4,10 +4,13 @@ An independent ImmacularIT project that converts the official, Docker-based
 [Nginx Proxy Manager](https://github.com/NginxProxyManager/nginx-proxy-manager)
 application into a native Debian 13 Proxmox LXC installation.
 
-> **Development status:** the repository is an engineering draft. Automated
-> source and syntax checks are implemented, but no Proxmox installation or
-> runtime feature has been marked as passed. Use only in a disposable container
-> with a Proxmox snapshot until the runtime test matrix is completed.
+> **Development status:** active runtime validation is in progress on Proxmox
+> VE 9.2.9 with Debian 13.6 AMD64. Container creation, Node/Yarn, Certbot,
+> OpenResty, frontend locale compilation, frontend build, and backend dependency
+> installation have all been exercised successfully. The complete installation
+> is **not yet passed** because the backend systemd service still requires
+> diagnosis. Use only a disposable test container until the runtime matrix is
+> complete.
 
 ## Pinned upstream
 
@@ -49,19 +52,22 @@ See [docs/PROJECT-HANDOFF.md](docs/PROJECT-HANDOFF.md) for the complete Docker-t
 
 ## Development installation
 
-Run this only on a disposable Proxmox VE 9.x test host after the development
-branch has been published:
+Run this only on a disposable Proxmox VE 9.x test host:
 
 ```bash
 bash <(curl -fsSL \
   https://raw.githubusercontent.com/ImmacularIT/Proxmox-LXC-Nginx-Proxy-Manager/develop/native-lxc-v2.15.1/ct/nginx-proxy-manager.sh)
 ```
 
-Default Install prompts for storage, container ID, hostname, bridge, DHCP or
-static IPv4, static gateway, and optional VLAN. Pressing Enter accepts the
-shown default. Advanced Install retains the generic builder options for CPU,
-RAM, disk, IPv6, DNS, MTU, MAC address, SSH, features, SDN, and uncommon LXC
-properties.
+The host launcher is project-owned and uses Proxmox's own `pct`, `pveam`,
+`pvesm`, and `pvesh` commands directly. It does not load an unrelated script
+framework and does not send installation telemetry or usage data.
+
+Default Install prompts for container storage, template storage, container ID,
+hostname, bridge, DHCP or static IPv4, static gateway, and optional VLAN.
+Advanced Install additionally allows CPU, RAM, disk, and an explicit
+nesting/keyctl toggle. Nesting is disabled by default and is not required by
+Nginx Proxy Manager.
 
 Current default resources are deliberately sized for the source build:
 
@@ -139,17 +145,18 @@ and retains rollback guidance and the backup path.
 
 Repository checks cover Bash and JSON syntax, systemd units, required metadata,
 version pins, Docker-derived source markers, branding PNG signatures, forbidden
-nested-runtime installation commands, moving upstream branch URLs, and obvious
-private-key or token patterns.
+nested-runtime installation commands, moving upstream branch URLs, explicit
+no-telemetry launcher/installer invariants, and obvious private-key or token
+patterns.
 
 These checks do not replace a real Proxmox test. See
-[docs/RUNTIME-TEST-PLAN.md](docs/RUNTIME-TEST-PLAN.md). No runtime item is passed
-until its result is recorded after execution on Proxmox.
+[docs/RUNTIME-TEST-PLAN.md](docs/RUNTIME-TEST-PLAN.md). The complete runtime path
+remains unpassed until the service-start issue and remaining application tests
+are resolved.
 
 ## Project identity
 
 Nginx Proxy Manager remains an upstream project maintained by its authors and
 is officially distributed as a Docker application. This repository is an
 unofficial native Proxmox LXC adaptation maintained by
-[ImmacularIT](https://github.com/ImmacularIT). It is not an official PVE
-Community Script.
+[ImmacularIT](https://github.com/ImmacularIT).
