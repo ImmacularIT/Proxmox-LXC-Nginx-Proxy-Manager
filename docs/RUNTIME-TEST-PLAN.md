@@ -48,27 +48,27 @@ Current runtime-validation instance:
 | Final Proxmox `net0` values | NOT RUN | |
 | Advanced Install remains functional | NOT RUN | |
 | Proxmox owns hostname and resolver files | NOT RUN | |
-| Unprivileged container confirmed | NOT RUN | |
-| No Docker or Podman binary installed | NOT RUN | |
+| Unprivileged container confirmed | PASSED | 2026-08-07, PVE 9.2.9 / Debian 13.6 / CT 901 created and exercised as an unprivileged LXC. |
+| No Docker or Podman binary installed | PASSED | 2026-08-07, CT 901: `npm-lxc-healthcheck` reported `PASS  no Docker runtime installed`. |
 
 ## Build and service matrix
 
 | Test | Status | Evidence / notes |
 |---|---|---|
-| Exact NPM commit fetched | NOT RUN | |
-| Exact source blob checks pass | NOT RUN | |
-| Node.js 22 and Yarn 1 validation | NOT RUN | |
-| Frontend build completes | NOT RUN | |
-| Backend native dependencies compile | NOT RUN | |
-| OpenResty 1.29.2.5 build completes | NOT RUN | |
+| Exact NPM commit fetched | PASSED | 2026-08-07, CT 901 reached a completed immutable `2.15.1` release after the installer verified the pinned NPM commit. |
+| Exact source blob checks pass | PASSED | 2026-08-07, CT 901 completed the source-verification/build path using the pinned blob checks. |
+| Node.js 22 and Yarn 1 validation | PASSED | 2026-08-07, CT 901 installed and validated Node.js 22.23.2 and Yarn 1.22.22. |
+| Frontend build completes | PASSED | 2026-08-07, CT 901 completed locale compilation and the Vite production frontend build. |
+| Backend native dependencies compile | PASSED | 2026-08-07, CT 901 completed the production backend dependency installation and immutable release creation. |
+| OpenResty 1.29.2.5 build completes | PASSED | 2026-08-07, CT 901 completed the native OpenResty 1.29.2.5 source build. |
 | HTTP/3, stream, Lua and GeoIP2 flags present | NOT RUN | |
-| Certbot 5.6.0 works | NOT RUN | |
+| Certbot 5.6.0 works | PASSED | 2026-08-07, CT 901 installed Certbot 5.6.0 with pyOpenSSL 26.2.0 and cryptography 48.0.0; dependency check passed. |
 | SQLite database initializes | PASSED | 2026-08-07, CT 901: backend selected `/data/database.sqlite`, created the database and JWT keys successfully. |
 | Official migrations complete | PASSED | 2026-08-07, CT 901: official migration chain ran from database version `none` through the current schema before the backend began listening. |
 | Backend systemd startup | PASSED | Initial `ExecStartPre` failure rejected an intentionally empty custom Nginx include; fix `3d782a82f011f62e707666d7f81d4b1cabd4e17a` was installed from CI-validated code commit `1041ed5076d8584a62a3afd626ec1a0cd5245764`. Retest: prepare exited 0, service active/running, backend PID listening on port 3000. |
-| OpenResty systemd startup | FAILED - RETEST | 2026-08-07, CT 901: standalone `nginx -t` passed, but the systemd `ExecStartPre=/usr/sbin/nginx -t` failed because `PrivateTmp=true` gives each service command a separate filesystem namespace and `/tmp/nginx/body` did not survive from the previous pre-start command. Fix binds service-owned `/var/cache/nginx/tmp` to the official `/tmp/nginx` path while preserving `PrivateTmp=true`; code commit `ae201d1e78b04284821eaf8ed20fefe9b1ef8af9`. Retest pending. |
-| Restart policies recover processes | NOT RUN | |
-| Health helper passes | NOT RUN | |
+| OpenResty systemd startup | PASSED | Initial systemd `nginx -t` failed because `PrivateTmp=true` isolated `/tmp/nginx/body` between service commands. Retest with commit `4ff425adff791cb7248c52abac0e15217b3fcc7c`: `PrivateTmp=true` retained, `/var/cache/nginx/tmp` bound to `/tmp/nginx`, pre-start checks exited 0, OpenResty active/running. |
+| Restart policies recover processes | NOT RUN | Explicit start-limit safeguards are installed; process-recovery behavior still requires a deliberate failure/restart test. |
+| Health helper passes | PASSED | 2026-08-07, CT 901: all native LXC health checks passed with backend and Nginx active, configuration valid, ports 3000/80/81/443 listening, UI responsive, release marker valid, and no Docker runtime installed. |
 | Full container reboot survives | NOT RUN | |
 | Persistent data survives reboot | NOT RUN | |
 
@@ -90,7 +90,7 @@ Current runtime-validation instance:
 
 | Test | Status | Evidence / notes |
 |---|---|---|
-| Administration interface on port 81 | NOT RUN | |
+| Administration interface on port 81 | PASSED | 2026-08-07, CT 901: OpenResty listened on IPv4/IPv6 port 81 and local HTTP request returned status 200. Browser rendering remains a separate test. |
 | First-run setup wizard | NOT RUN | |
 | No invented/default credentials | NOT RUN | |
 | Create administrator | NOT RUN | |
