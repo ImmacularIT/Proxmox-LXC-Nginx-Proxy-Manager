@@ -90,10 +90,11 @@ Current runtime-validation instance:
 
 | Test | Status | Evidence / notes |
 |---|---|---|
-| Administration interface on port 81 | PASSED | 2026-08-07, CT 901: OpenResty listened on IPv4/IPv6 port 81 and local HTTP request returned status 200. Browser rendering remains a separate test. |
-| First-run setup wizard | NOT RUN | |
+| Administration interface on port 81 | PASSED | 2026-08-07, CT 901: local HTTP returned 200 and browser GUI login/dashboard navigation succeeded. |
+| First-run setup wizard | NOT RUN | Browser login succeeded; preserve as NOT RUN until the wizard path itself is explicitly confirmed/recorded. |
 | No invented/default credentials | NOT RUN | |
 | Create administrator | NOT RUN | |
+| Displayed installed version | FAILED - RETEST | Browser GUI showed `v2.0.0 Update Available: v2.15.1` although the verified source/release is v2.15.1. Cause: upstream `backend/package.json` remains `2.0.0` and API/update routes read it directly. Native fix stamps only the staged runtime package metadata after immutable source/blob verification; fix commit `a00e8c17b3e3e230ed8658d78ed138a8e13b70b4`. Retest pending. |
 | Create HTTP proxy host | NOT RUN | |
 | Proxy to HTTPS backend | NOT RUN | |
 | WebSocket proxying | NOT RUN | |
