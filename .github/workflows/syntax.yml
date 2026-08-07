@@ -29,6 +29,12 @@ jobs:
           python3 -m json.tool json/nginx-proxy-manager.json >/dev/null
           python3 tests/validate_repository.py
 
+      - name: Validate native executable paths
+        run: |
+          grep -Fq 'LUAROCKS_BIN="/usr/local/bin/luarocks"' scripts/build-openresty-native.sh
+          grep -Fq '[[ -x "$LUAROCKS_BIN" ]]' scripts/build-openresty-native.sh
+          test "$(grep -Ec '^[[:space:]]*luarocks[[:space:]]' scripts/build-openresty-native.sh || true)" -eq 0
+
       - name: Validate systemd units
         run: |
           sudo install -m 0755 scripts/npm-prepare.sh /usr/local/sbin/npm-lxc-prepare
