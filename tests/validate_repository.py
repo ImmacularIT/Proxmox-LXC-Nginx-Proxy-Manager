@@ -95,6 +95,9 @@ assert 'NESTING=' not in launcher, "Nginx Proxy Manager does not require an LXC 
 assert 'Nesting/keyctl:' not in launcher, "Nesting/keyctl must not appear in the configuration review"
 assert 'title "NESTING"' not in launcher, "Nesting must not be exposed as an installer dialog"
 assert 'nesting=1,keyctl=1' not in launcher, "Launcher must not enable unnecessary nesting/keyctl features"
+assert 'hostname -I | awk' not in launcher, (
+    "Launcher must not reparse the completion IP with nested awk positional parameters"
+)
 
 installer = (ROOT / "install/nginx-proxy-manager-install.sh").read_text()
 for marker in [
