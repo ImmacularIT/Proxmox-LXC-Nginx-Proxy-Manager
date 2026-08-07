@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
+# Use a neutral UTF-8 process locale for deterministic build output. This avoids
+# warnings when Proxmox passes host locale names that are not generated inside
+# a fresh minimal Debian container, without changing the container's locale.
+export LANG=C.UTF-8
+export LC_ALL=C.UTF-8
+
 LIB_DIR="${NPM_LXC_LIB_DIR:-/usr/local/lib/npm-lxc}"
 if [[ -r "$LIB_DIR/versions.sh" ]]; then
   # shellcheck source=/dev/null
@@ -68,6 +74,13 @@ export NODE_OPTIONS="--openssl-legacy-provider"
 
 pushd "$SOURCE_DIR/frontend" >/dev/null
 NODE_ENV=development yarn install --frozen-lockfile --non-interactive --production=false
+# The pinned upstream source does not commit frontend/src/locale/lang/*.json.
+# Its official CI compiles them from frontend/src/locale/src before `yarn build`.
+yarn locale-compile
+[[ -f src/locale/lang/en.json && -f src/locale/lang/lang-list.json ]] || {
+  echo "Frontend locale compilation did not create the expected language files" >&2
+  exit 1
+}
 NODE_ENV=production yarn build
 [[ -f dist/index.html ]] || { echo "Frontend build did not create dist/index.html" >&2; exit 1; }
 popd >/dev/null
