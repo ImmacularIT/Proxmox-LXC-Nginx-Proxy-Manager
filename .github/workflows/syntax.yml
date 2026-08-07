@@ -29,11 +29,14 @@ jobs:
           python3 -m json.tool json/nginx-proxy-manager.json >/dev/null
           python3 tests/validate_repository.py
 
-      - name: Validate native executable paths
+      - name: Validate native executable paths and startup readiness
         run: |
           grep -Fq 'LUAROCKS_BIN="/usr/local/bin/luarocks"' scripts/build-openresty-native.sh
           grep -Fq '[[ -x "$LUAROCKS_BIN" ]]' scripts/build-openresty-native.sh
           test "$(grep -Ec '^[[:space:]]*luarocks[[:space:]]' scripts/build-openresty-native.sh || true)" -eq 0
+          grep -Fq 'wait_for_nginx_listeners' scripts/npm-healthcheck.sh
+          grep -Fq 'for attempt in {1..30}' scripts/npm-healthcheck.sh
+          grep -Fq 'systemctl is-active --quiet nginx-proxy-manager-nginx.service || return 1' scripts/npm-healthcheck.sh
 
       - name: Validate systemd units
         run: |
