@@ -75,9 +75,10 @@ prefers Proxmox's conventional `local` storage, then the first active
 `NPM_TEMPLATE_STORAGE=<storage>` when launching the script; it is not exposed as
 a normal installer dialog.
 
-Advanced Install additionally allows CPU, RAM, disk, and an explicit
-nesting/keyctl toggle. Nesting is disabled by default and is not required by
-Nginx Proxy Manager.
+Advanced Install additionally allows CPU, RAM, and disk customization. The
+launcher always creates an unprivileged LXC without enabling nesting or keyctl;
+runtime validation has shown that Nginx Proxy Manager does not require either
+feature.
 
 Current default resources are deliberately sized for the source build:
 
@@ -157,7 +158,8 @@ Repository checks cover Bash and JSON syntax, systemd units, required metadata,
 version pins, Docker-derived source markers, branding PNG signatures, forbidden
 nested-runtime installation commands, moving upstream branch URLs, explicit
 no-telemetry launcher/installer invariants, automatic template-storage handling,
-and obvious private-key or token patterns.
+no unnecessary LXC nesting/keyctl features, and obvious private-key or token
+patterns.
 
 Real Proxmox validation has now reached a passing native service stack: backend
 and OpenResty are active, ports 3000/80/81/443 listen, port 81 returns HTTP 200,
