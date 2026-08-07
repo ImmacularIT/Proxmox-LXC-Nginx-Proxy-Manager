@@ -73,6 +73,7 @@ for marker in [
     "prompt_identity",
     "prompt_network",
     "select_storage",
+    "resolve_template_storage",
     "find_or_download_template",
     "pct create",
     "pveam update",
@@ -83,6 +84,13 @@ for marker in [
 ]:
     assert marker in launcher, f"Missing launcher marker: {marker}"
 assert "donate" not in launcher.lower()
+assert 'pvesm status --content vztmpl' in launcher, "Template storage must be resolved from active Proxmox storage"
+assert 'NPM_TEMPLATE_STORAGE' in launcher, "Administrative template-storage override is missing"
+assert '"TEMPLATE STORAGE"' not in launcher, "Template cache placement must not be a normal installer dialog"
+assert "Template storage:" not in launcher, "Template cache placement must not appear in the user configuration review"
+assert launcher.index('confirm_configuration || exit 0') < launcher.index('TEMPLATE_STORAGE="$(resolve_template_storage)"'), (
+    "Template cache placement should be resolved only after user-facing CT settings are approved"
+)
 
 installer = (ROOT / "install/nginx-proxy-manager-install.sh").read_text()
 for marker in [
