@@ -141,6 +141,7 @@ assert install_release.index("yarn locale-compile") < install_release.index("NOD
 )
 assert "src/locale/lang/en.json" in install_release
 assert "src/locale/lang/lang-list.json" in install_release
+assert "better-sqlite3" in install_release, "Runtime-critical SQLite module load validation missing"
 
 production_shell = "\n".join(
     p.read_text(errors="replace")
@@ -173,6 +174,8 @@ for marker in [
     "/etc/nginx/conf.d/include/ip_ranges.conf",
 ]:
     assert marker in prepare, f"Missing persistent/runtime path marker: {marker}"
+assert '[[ -s "$conf" ]] || continue' in prepare, "Empty Nginx include files must be accepted"
+assert "IPv6 rewrite produced an empty file" not in prepare, "Empty custom includes must not be fatal"
 
 # Production application source must use immutable commits, not mutable branches.
 assert "NginxProxyManager/nginx-proxy-manager/main" not in production_shell
@@ -190,6 +193,8 @@ for unit in (ROOT / "systemd").glob("*.service"):
     assert "PrivateTmp=true" in text
     assert "RuntimeDirectory=nginx" in text
     assert "ExecStartPre=+/usr/local/sbin/npm-lxc-prepare" in text
+    assert "StartLimitIntervalSec=60" in text
+    assert "StartLimitBurst=5" in text
 
 for path in ROOT.rglob("*"):
     if path.is_file() and ".git" not in path.parts:
