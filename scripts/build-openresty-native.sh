@@ -1,6 +1,13 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
+# Build under Debian's always-available neutral UTF-8 locale. Proxmox may pass
+# host LC_* values into the container before those locales have been generated,
+# which otherwise causes extremely noisy Perl warnings during OpenResty builds.
+# This changes only this build process; it does not rewrite the container locale.
+export LANG=C.UTF-8
+export LC_ALL=C.UTF-8
+
 LIB_DIR="${NPM_LXC_LIB_DIR:-/usr/local/lib/npm-lxc}"
 if [[ -r "$LIB_DIR/versions.sh" ]]; then
   # shellcheck source=/dev/null
