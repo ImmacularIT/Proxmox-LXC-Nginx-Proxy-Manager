@@ -3,6 +3,8 @@ Description=Nginx Proxy Manager OpenResty frontend and proxy service
 Documentation=https://github.com/NginxProxyManager/nginx-proxy-manager
 Requires=nginx-proxy-manager-backend.service
 After=nginx-proxy-manager-backend.service network-online.target
+StartLimitIntervalSec=60
+StartLimitBurst=5
 
 [Service]
 Type=simple
