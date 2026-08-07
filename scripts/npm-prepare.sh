@@ -84,15 +84,16 @@ if ! is_true "${DISABLE_RESOLVER:-false}"; then
 fi
 
 # Preserve the official DISABLE_IPV6 behavior without touching any Proxmox
-# network configuration. Only Nginx listen directives are toggled.
+# network configuration. Only Nginx listen directives are toggled. Empty
+# custom include files are valid Nginx configuration and must remain empty.
 while IFS= read -r -d '' conf; do
+  [[ -s "$conf" ]] || continue
   tmp="${conf}.tmp"
   if is_true "${DISABLE_IPV6:-false}"; then
     sed -E 's/^([^#]*)listen \[::\]/\1#listen [::]/g' "$conf" >"$tmp"
   else
     sed -E 's/^(\s*)#listen \[::\]/\1listen [::]/g' "$conf" >"$tmp"
   fi
-  [[ -s "$tmp" ]] || { rm -f "$tmp"; echo "IPv6 rewrite produced an empty file: ${conf}" >&2; exit 1; }
   if cmp -s "$conf" "$tmp"; then
     rm -f "$tmp"
   else
