@@ -476,7 +476,8 @@ rc=${PIPESTATUS[0]}
 set -e
 [[ "$rc" -eq 0 ]] || handle_install_failure "$rc"
 
-IP="$(pct exec "$CTID" -- sh -c "hostname -I | awk '{print \\$1}'" 2>/dev/null || printf '%s' "$IP")"
+# The container IPv4 was already resolved and validated before installation.
+# Reuse it for the completion message rather than reparsing shell output here.
 ok "Completed successfully"
 printf '\n  🌐 Administration interface: http://%s:81\n' "$IP"
 printf '  ℹ️  Complete the official first-run setup wizard; no default credentials are created.\n'
