@@ -105,6 +105,25 @@ rsync -a --delete "$SOURCE_DIR/frontend/dist/" "$STAGING_DIR/frontend/"
 install -d -m 0755 "$STAGING_DIR/share/upstream-rootfs"
 rsync -a "$SOURCE_DIR/docker/rootfs/" "$STAGING_DIR/share/upstream-rootfs/"
 
+# The verified upstream v2.15.1 source intentionally keeps backend/package.json
+# at the generic application version 2.0.0, while runtime API/update endpoints
+# read that field directly. The official Docker build carries the real release
+# separately as BUILD_VERSION/NPM_BUILD_VERSION. For the native release, stamp
+# only the staged runtime copy after all immutable source/blob checks so the API
+# reports the same verified release as .version without altering source proof.
+node --input-type=module - "$STAGING_DIR/package.json" "$NPM_VERSION" <<'NODE'
+import fs from "node:fs";
+const [, , packagePath, releaseVersion] = process.argv;
+const pkg = JSON.parse(fs.readFileSync(packagePath, "utf8"));
+pkg.version = releaseVersion;
+fs.writeFileSync(packagePath, `${JSON.stringify(pkg, null, "\t")}\n`);
+NODE
+staged_version="$(node --input-type=module -e "import pkg from '${STAGING_DIR}/package.json' with { type: 'json' }; console.log(pkg.version)")"
+[[ "$staged_version" == "$NPM_VERSION" ]] || {
+  echo "Staged backend version metadata mismatch: ${staged_version}" >&2
+  exit 1
+}
+
 printf '%s\n' "$NPM_RELEASE" >"$STAGING_DIR/.upstream-release"
 printf '%s\n' "$NPM_COMMIT" >"$STAGING_DIR/.upstream-commit"
 printf '%s\n' "$NPM_BASE_COMMIT" >"$STAGING_DIR/.upstream-base-commit"
