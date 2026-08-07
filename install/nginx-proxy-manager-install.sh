@@ -22,6 +22,9 @@ PROJECT_REF="${NPM_PROJECT_REF:-develop/native-lxc-v2.15.1}"
 PROJECT_RAW="https://raw.githubusercontent.com/${PROJECT_OWNER}/${PROJECT_REPO}/${PROJECT_REF}"
 EXPECTED_NPM_COMMIT="76f09db610cfcaecf6d608a8947d6f75aa028870"
 EXPECTED_NPM_BASE_COMMIT="fe5ba055ed29033a619e9103bef5d8218fe1fab0"
+EXPECTED_CERTBOT_VERSION="5.6.0"
+EXPECTED_PYOPENSSL_VERSION="26.2.0"
+EXPECTED_CRYPTOGRAPHY_VERSION="48.0.0"
 LIB_DIR="/usr/local/lib/npm-lxc"
 BUILD_ROOT="/var/tmp/npm-native-build"
 
@@ -90,14 +93,24 @@ info "Installing pinned Certbot environment"
 rm -rf /opt/certbot
 python3 -m venv /opt/certbot
 /opt/certbot/bin/pip install --disable-pip-version-check --no-cache-dir --upgrade pip
+# The pinned upstream Dockerfile currently requests pyOpenSSL 24.3.0 together
+# with cryptography 48.0.0. Those declared dependency ranges conflict. Keep
+# the upstream cryptography pin and use pyOpenSSL 26.2.0, which explicitly
+# supports cryptography 48.x and Python 3.13.
 /opt/certbot/bin/pip install --disable-pip-version-check --no-cache-dir \
-  'pyopenssl==24.3.0' 'cffi' 'certbot==5.6.0' 'cryptography==48.0.0' \
+  "pyopenssl==${EXPECTED_PYOPENSSL_VERSION}" 'cffi' \
+  "certbot==${EXPECTED_CERTBOT_VERSION}" "cryptography==${EXPECTED_CRYPTOGRAPHY_VERSION}" \
   'tldextract' 'zope' 'pip-system-certs'
 ln -sfn /opt/certbot/bin/certbot /usr/local/bin/certbot
 certbot_version="$(/usr/local/bin/certbot --version | awk '{print $2}')"
-[[ "$certbot_version" == "5.6.0" ]] || fatal "Certbot version validation failed: ${certbot_version}"
+pyopenssl_version="$(/opt/certbot/bin/python -c 'import importlib.metadata; print(importlib.metadata.version("pyopenssl"))')"
+cryptography_version="$(/opt/certbot/bin/python -c 'import importlib.metadata; print(importlib.metadata.version("cryptography"))')"
+[[ "$certbot_version" == "$EXPECTED_CERTBOT_VERSION" ]] || fatal "Certbot version validation failed: ${certbot_version}"
+[[ "$pyopenssl_version" == "$EXPECTED_PYOPENSSL_VERSION" ]] || fatal "pyOpenSSL version validation failed: ${pyopenssl_version}"
+[[ "$cryptography_version" == "$EXPECTED_CRYPTOGRAPHY_VERSION" ]] || fatal "cryptography version validation failed: ${cryptography_version}"
+/opt/certbot/bin/pip check >/dev/null || fatal "Certbot Python environment has unresolved dependency conflicts"
 chown -R npm:npm /opt/certbot
-ok "Installed Certbot ${certbot_version}"
+ok "Installed Certbot ${certbot_version} (pyOpenSSL ${pyopenssl_version}, cryptography ${cryptography_version})"
 
 info "Installing project-owned native service tooling"
 install -d -o root -g root -m 0755 "$LIB_DIR"
@@ -106,6 +119,9 @@ project_download "$LIB_DIR/versions.sh" lib/versions.sh
 source "$LIB_DIR/versions.sh"
 [[ "$NPM_COMMIT" == "$EXPECTED_NPM_COMMIT" ]] || fatal "Project version manifest has an unexpected NPM commit"
 [[ "$NPM_BASE_COMMIT" == "$EXPECTED_NPM_BASE_COMMIT" ]] || fatal "Project version manifest has an unexpected base-image commit"
+[[ "$CERTBOT_VERSION" == "$EXPECTED_CERTBOT_VERSION" ]] || fatal "Project version manifest has an unexpected Certbot version"
+[[ "$PYOPENSSL_VERSION" == "$EXPECTED_PYOPENSSL_VERSION" ]] || fatal "Project version manifest has an unexpected pyOpenSSL version"
+[[ "$CRYPTOGRAPHY_VERSION" == "$EXPECTED_CRYPTOGRAPHY_VERSION" ]] || fatal "Project version manifest has an unexpected cryptography version"
 for script in build-openresty-native.sh install-release.sh; do
   project_download "$LIB_DIR/$script" "scripts/$script"
   chmod 0755 "$LIB_DIR/$script"
@@ -181,6 +197,8 @@ cat >/etc/nginx-proxy-manager/installation.json <<MANIFEST
   "node_version": "$(node --version)",
   "yarn_version": "$(yarn --version)",
   "certbot_version": "${certbot_version}",
+  "pyopenssl_version": "${pyopenssl_version}",
+  "cryptography_version": "${cryptography_version}",
   "database_engine": "SQLite (better-sqlite3)",
   "operating_system": "$(. /etc/os-release; printf '%s %s' "$PRETTY_NAME" "$VERSION_ID")",
   "architecture": "$(dpkg --print-architecture)",
