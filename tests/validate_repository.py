@@ -95,6 +95,18 @@ for marker in [
 ]:
     assert marker in installer, f"Missing installer marker: {marker}"
 
+# Helper scripts are copied into /usr/local/lib/npm-lxc at runtime. They must
+# prefer the installed versions manifest and only fall back to the repository
+# relative path when executed directly from a source checkout.
+for helper_name in ["build-openresty-native.sh", "install-release.sh"]:
+    helper = (ROOT / "scripts" / helper_name).read_text()
+    assert 'NPM_LXC_LIB_DIR:-/usr/local/lib/npm-lxc' in helper, (
+        f"Installed-layout version lookup missing from {helper_name}"
+    )
+    assert 'if [[ -r "$LIB_DIR/versions.sh" ]]' in helper, (
+        f"Installed versions manifest guard missing from {helper_name}"
+    )
+
 production_shell = "\n".join(
     p.read_text(errors="replace")
     for p in [ROOT / "install/nginx-proxy-manager-install.sh", *sorted((ROOT / "scripts").glob("*.sh"))]
