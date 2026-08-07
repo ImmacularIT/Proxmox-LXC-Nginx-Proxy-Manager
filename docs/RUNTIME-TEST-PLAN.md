@@ -17,6 +17,15 @@ Target environment:
 - inbound TCP 80 and TCP/UDP 443 where certificate and HTTP/3 testing requires it;
 - disposable HTTP, HTTPS, and WebSocket backends.
 
+Current runtime-validation instance:
+
+- date: 2026-08-07;
+- Proxmox VE: 9.2.9, kernel 7.0.14-9-pve;
+- template: Debian 13.6 AMD64;
+- privilege model: unprivileged LXC;
+- container ID: 901;
+- network observed during install: DHCP IPv4, 192.168.1.110.
+
 ## Container creation matrix
 
 | Test | Status | Evidence / notes |
@@ -56,7 +65,7 @@ Target environment:
 | Certbot 5.6.0 works | NOT RUN | |
 | SQLite database initializes | NOT RUN | |
 | Official migrations complete | NOT RUN | |
-| Backend systemd startup | NOT RUN | |
+| Backend systemd startup | FAILED - RETEST | 2026-08-07, PVE 9.2.9 / Debian 13.6 / CT 901: `ExecStartPre=/usr/local/sbin/npm-lxc-prepare` rejected the intentionally empty `/data/nginx/custom/root_top.conf`. Fix: `3d782a82f011f62e707666d7f81d4b1cabd4e17a`; retest pending. |
 | OpenResty systemd startup | NOT RUN | |
 | Restart policies recover processes | NOT RUN | |
 | Health helper passes | NOT RUN | |
