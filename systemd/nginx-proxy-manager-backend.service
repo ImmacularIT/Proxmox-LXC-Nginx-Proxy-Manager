@@ -4,6 +4,8 @@ Documentation=https://github.com/NginxProxyManager/nginx-proxy-manager
 Wants=network-online.target
 After=network-online.target
 Before=nginx-proxy-manager-nginx.service
+StartLimitIntervalSec=60
+StartLimitBurst=5
 
 [Service]
 Type=simple
