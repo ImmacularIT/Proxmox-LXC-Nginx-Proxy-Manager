@@ -6,11 +6,12 @@ application into a native Debian 13 Proxmox LXC installation.
 
 > **Development status:** active runtime validation is in progress on Proxmox
 > VE 9.2.9 with Debian 13.6 AMD64. Container creation, Node/Yarn, Certbot,
-> OpenResty, frontend locale compilation, frontend build, and backend dependency
-> installation have all been exercised successfully. The complete installation
-> is **not yet passed** because the backend systemd service still requires
-> diagnosis. Use only a disposable test container until the runtime matrix is
-> complete.
+> OpenResty compilation, frontend locale compilation, frontend build, backend
+> dependency installation, SQLite initialization, official migrations, and
+> backend systemd startup have all been exercised successfully. The complete
+> installation is **not yet passed** because OpenResty service startup, health
+> checks, reboot persistence, and application feature tests remain. Use only a
+> disposable test container until the runtime matrix is complete.
 
 ## Pinned upstream
 
@@ -151,8 +152,8 @@ patterns.
 
 These checks do not replace a real Proxmox test. See
 [docs/RUNTIME-TEST-PLAN.md](docs/RUNTIME-TEST-PLAN.md). The complete runtime path
-remains unpassed until the service-start issue and remaining application tests
-are resolved.
+remains unpassed until OpenResty startup, health checks, reboot persistence, and
+the remaining application tests are completed.
 
 ## Project identity
 
