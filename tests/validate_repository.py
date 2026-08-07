@@ -62,26 +62,27 @@ expected_pins = {
     "GEOIP2_COMMIT": "445df24ef3781e488cee3dfe8a1e111997fc1dfe",
     "NODE_MAJOR": "22",
     "CERTBOT_VERSION": "5.6.0",
-    "PVE_BUILD_COMMIT": "5ddc4a2a41991324a534dd02b81fe3bc5a3bca04",
 }
 for name, value in expected_pins.items():
     marker = f'readonly {name}="{value}"'
     assert marker in versions, f"Missing or changed pin: {marker}"
+assert "PVE_BUILD_COMMIT" not in versions
 
 launcher = (ROOT / "ct/nginx-proxy-manager.sh").read_text()
 for marker in [
-    "configure_default_identity",
-    "configure_default_network",
-    "configure_project_tags",
+    "prompt_identity",
+    "prompt_network",
+    "select_storage",
+    "find_or_download_template",
+    "pct create",
+    "pveam update",
     "set_project_description",
-    "build_container",
     "nginx-proxy-manager;reverse-proxy;immacularit;webserver",
-    "community-script",
     "unofficial native Proxmox LXC adaptation",
+    "No installation telemetry or usage data is sent",
 ]:
     assert marker in launcher, f"Missing launcher marker: {marker}"
 assert "donate" not in launcher.lower()
-assert "community-scripts.github.io" not in launcher
 
 installer = (ROOT / "install/nginx-proxy-manager-install.sh").read_text()
 for marker in [
@@ -92,8 +93,31 @@ for marker in [
     "nginx-proxy-manager-nginx.service",
     "DB_SQLITE_FILE=/data/database.sqlite",
     "No default administrator credentials were created",
+    "service_diagnostics",
+    "export LANG=C.UTF-8",
+    "export LC_ALL=C.UTF-8",
 ]:
     assert marker in installer, f"Missing installer marker: {marker}"
+assert "FUNCTIONS_FILE_PATH" not in installer
+assert "msg_info" not in installer
+assert "msg_ok" not in installer
+assert "msg_error" not in installer
+assert "%s: " in installer, "Status labels must be separated from live command output with a colon"
+
+# Neither host-side container creation nor container-side installation may
+# contact, advertise, or report diagnostics to an unrelated script service.
+launcher_and_installer = launcher + "\n" + installer
+for forbidden in [
+    "telemetry.community-scripts.org",
+    "git.community-scripts.org",
+    "raw.githubusercontent.com/community-scripts",
+    "community-scripts.github.io",
+    "post_to_api",
+    "post_progress_to_api",
+    "DIAGNOSTICS=",
+    "TELEMETRY_",
+]:
+    assert forbidden not in launcher_and_installer, f"Forbidden external framework runtime marker: {forbidden}"
 
 # Helper scripts are copied into /usr/local/lib/npm-lxc at runtime. They must
 # prefer the installed versions manifest and only fall back to the repository
