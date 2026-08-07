@@ -63,9 +63,9 @@ Current runtime-validation instance:
 | OpenResty 1.29.2.5 build completes | NOT RUN | |
 | HTTP/3, stream, Lua and GeoIP2 flags present | NOT RUN | |
 | Certbot 5.6.0 works | NOT RUN | |
-| SQLite database initializes | NOT RUN | |
-| Official migrations complete | NOT RUN | |
-| Backend systemd startup | FAILED - RETEST | 2026-08-07, PVE 9.2.9 / Debian 13.6 / CT 901: `ExecStartPre=/usr/local/sbin/npm-lxc-prepare` rejected the intentionally empty `/data/nginx/custom/root_top.conf`. Fix: `3d782a82f011f62e707666d7f81d4b1cabd4e17a`; retest pending. |
+| SQLite database initializes | PASSED | 2026-08-07, CT 901: backend selected `/data/database.sqlite`, created the database and JWT keys successfully. |
+| Official migrations complete | PASSED | 2026-08-07, CT 901: official migration chain ran from database version `none` through the current schema before the backend began listening. |
+| Backend systemd startup | PASSED | Initial `ExecStartPre` failure rejected an intentionally empty custom Nginx include; fix `3d782a82f011f62e707666d7f81d4b1cabd4e17a` was installed from CI-validated code commit `1041ed5076d8584a62a3afd626ec1a0cd5245764`. Retest: prepare exited 0, service active/running, backend PID listening on port 3000. |
 | OpenResty systemd startup | NOT RUN | |
 | Restart policies recover processes | NOT RUN | |
 | Health helper passes | NOT RUN | |
