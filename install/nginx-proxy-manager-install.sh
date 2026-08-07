@@ -33,7 +33,10 @@ ok() { if declare -F msg_ok >/dev/null; then msg_ok "$1"; else printf 'OK: %s\n'
 fatal() { if declare -F msg_error >/dev/null; then msg_error "$1"; else printf 'ERROR: %s\n' "$1" >&2; fi; exit 1; }
 
 project_download() {
-  local destination="$1" path="$2" url="${PROJECT_RAW}/${path}"
+  local destination path url
+  destination="$1"
+  path="$2"
+  url="${PROJECT_RAW}/${path}"
   install -d -m 0755 "$(dirname "$destination")"
   if declare -F curl_download >/dev/null; then
     curl_download "$destination" "$url"
