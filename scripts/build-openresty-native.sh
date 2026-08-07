@@ -20,6 +20,7 @@ fi
 
 BUILD_ROOT="${BUILD_ROOT:-/var/tmp/npm-native-build}"
 OPENRESTY_JOBS="${OPENRESTY_JOBS:-$(nproc)}"
+LUAROCKS_BIN="/usr/local/bin/luarocks"
 
 clone_exact() {
   local repo="$1" commit="$2" dest="$3"
@@ -53,7 +54,11 @@ pushd "$BUILD_ROOT/luarocks" >/dev/null
 make -j"$OPENRESTY_JOBS"
 make install
 popd >/dev/null
-[[ "$(luarocks --version | head -n1)" == *"${LUAROCKS_VERSION}"* ]] || {
+[[ -x "$LUAROCKS_BIN" ]] || {
+  echo "LuaRocks executable was not installed at ${LUAROCKS_BIN}" >&2
+  exit 1
+}
+[[ "$("$LUAROCKS_BIN" --version | head -n1)" == *"${LUAROCKS_VERSION}"* ]] || {
   echo "LuaRocks version validation failed" >&2
   exit 1
 }
@@ -123,9 +128,9 @@ popd >/dev/null
 
 # Pin the rock versions that were current when the selected official base image
 # was built. This closes the moving-LuaRocks dependency left by upstream.
-luarocks install lua-cjson "$LUA_CJSON_ROCK"
-luarocks install lua-resty-http "$LUA_RESTY_HTTP_ROCK"
-luarocks install lua-resty-openidc "$LUA_RESTY_OPENIDC_ROCK"
+"$LUAROCKS_BIN" install lua-cjson "$LUA_CJSON_ROCK"
+"$LUAROCKS_BIN" install lua-resty-http "$LUA_RESTY_HTTP_ROCK"
+"$LUAROCKS_BIN" install lua-resty-openidc "$LUA_RESTY_OPENIDC_ROCK"
 
 nginx -V 2>&1 | grep -F -- "--with-http_v3_module" >/dev/null
 nginx -V 2>&1 | grep -F -- "--with-stream" >/dev/null
