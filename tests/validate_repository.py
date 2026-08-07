@@ -143,6 +143,11 @@ assert install_release.index("yarn locale-compile") < install_release.index("NOD
 assert "src/locale/lang/en.json" in install_release
 assert "src/locale/lang/lang-list.json" in install_release
 assert "better-sqlite3" in install_release, "Runtime-critical SQLite module load validation missing"
+assert "pkg.version = releaseVersion" in install_release, "Verified release version is not stamped into runtime package metadata"
+assert install_release.index('verify_blob backend/package.json') < install_release.index("pkg.version = releaseVersion"), (
+    "Runtime version metadata may only be adapted after immutable upstream package verification"
+)
+assert "Staged backend version metadata mismatch" in install_release
 
 production_shell = "\n".join(
     p.read_text(errors="replace")
