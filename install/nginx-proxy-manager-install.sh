@@ -172,6 +172,14 @@ ok "Built Nginx Proxy Manager ${NPM_RELEASE}"
 info "Installing official runtime templates"
 rsync -a "$release_dir/share/upstream-rootfs/etc/nginx/" /etc/nginx/
 rm -f /etc/nginx/conf.d/dev.conf
+# The official Docker configuration switches worker identity with `user npm;`.
+# This native service already runs the Nginx master and workers as npm under
+# systemd, so keep the pristine upstream copy in the release tree but disable
+# the redundant runtime directive to avoid a guaranteed non-root warning.
+sed -Ei 's|^[[:space:]]*user[[:space:]]+npm[[:space:]]*;|# user npm; # service identity enforced by systemd|' /etc/nginx/nginx.conf
+if grep -Eq '^[[:space:]]*user[[:space:]]+npm[[:space:]]*;' /etc/nginx/nginx.conf; then
+  fatal "Failed to adapt the redundant Nginx user directive for systemd"
+fi
 install -d -m 0755 /etc/logrotate.d /var/www/html
 install -m 0644 "$release_dir/share/upstream-rootfs/etc/logrotate.d/nginx-proxy-manager" /etc/logrotate.d/nginx-proxy-manager
 install -m 0644 "$release_dir/share/upstream-rootfs/etc/letsencrypt.ini" /etc/letsencrypt.ini
