@@ -91,6 +91,10 @@ assert "Template storage:" not in launcher, "Template cache placement must not a
 assert launcher.index('confirm_configuration || exit 0') < launcher.index('TEMPLATE_STORAGE="$(resolve_template_storage)"'), (
     "Template cache placement should be resolved only after user-facing CT settings are approved"
 )
+assert 'NESTING=' not in launcher, "Nginx Proxy Manager does not require an LXC nesting toggle"
+assert 'Nesting/keyctl:' not in launcher, "Nesting/keyctl must not appear in the configuration review"
+assert 'title "NESTING"' not in launcher, "Nesting must not be exposed as an installer dialog"
+assert 'nesting=1,keyctl=1' not in launcher, "Launcher must not enable unnecessary nesting/keyctl features"
 
 installer = (ROOT / "install/nginx-proxy-manager-install.sh").read_text()
 for marker in [
