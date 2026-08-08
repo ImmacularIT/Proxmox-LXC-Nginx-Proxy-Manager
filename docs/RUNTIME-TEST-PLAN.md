@@ -27,7 +27,7 @@ Runtime-validation instances:
 - 2026-08-08: the maintainer confirmed the complete Container creation, Build and service, Proxmox branding, and Application feature matrices below all pass on the tested Proxmox VE 9.2.9 / Debian 13.6 AMD64 environment.
 - 2026-08-08: after those matrices passed, the host launcher was tightened to refresh the Proxmox appliance catalog on every approved installation and download/use the newest Debian 13 AMD64 template when the cached copy is older. The install-method chooser was also simplified without changing Default/Advanced behavior.
 - 2026-08-08: the maintainer completed a final fresh installation from release-candidate head `c7653f4cc712e6a2702988038a7f445d48e6445a` and confirmed the resulting installation works correctly. The successful installer completion also confirms its mandatory native `npm-lxc-healthcheck` completed successfully. The launcher cannot reach container creation if its mandatory `pveam update` catalog refresh fails, so the final run also confirms the refreshed-catalog path executed successfully. The special older-cache and empty-cache download branches were not separately claimed as runtime-exercised.
-- 2026-08-08: after the successful final installation, the production container default was changed to enable Proxmox `nesting=1` while remaining unprivileged and leaving keyctl disabled. This is intended to suppress the recurring `Systemd 257 detected. You may need to enable nesting.` Proxmox start warning. Because this changes the host-side CT configuration, one narrow final start/reboot warning check remains before promotion.
+- 2026-08-08: after the successful final installation, the production container default was changed to enable Proxmox `nesting=1` while remaining unprivileged and leaving keyctl disabled. The maintainer then applied the production configuration on the real PVE host, rebooted the CT, confirmed the recurring `Systemd 257 detected. You may need to enable nesting.` task warning was gone, and confirmed `npm-lxc-healthcheck` still passed. This closes the final nesting-enabled promotion gate.
 
 ## Container creation matrix
 
@@ -53,7 +53,7 @@ The maintainer confirmed the complete matrix below as passing on 2026-08-08.
 | Final Proxmox `net0` values | PASSED | Maintainer-confirmed complete matrix pass. |
 | Advanced Install remains functional | PASSED | Maintainer-confirmed complete matrix pass. |
 | Proxmox owns hostname and resolver files | PASSED | Maintainer-confirmed complete matrix pass. |
-| Unprivileged container confirmed | PASSED | Maintainer-confirmed complete matrix pass. The current launcher remains unprivileged, enables `nesting=1` as a fixed production default, and does not enable keyctl. |
+| Unprivileged container confirmed | PASSED | Maintainer-confirmed complete matrix pass. Current production configuration was also confirmed unprivileged with `nesting=1`; keyctl remains disabled. |
 | No Docker or Podman binary installed | PASSED | Maintainer-confirmed complete matrix pass; native health validation also confirmed no Docker runtime. |
 
 ## Build and service matrix
@@ -76,9 +76,9 @@ The maintainer confirmed the complete matrix below as passing on 2026-08-08.
 | Backend systemd startup | PASSED | Maintainer-confirmed complete matrix pass. |
 | OpenResty systemd startup | PASSED | Maintainer-confirmed complete matrix pass with hardened native services. |
 | Restart policies recover processes | PASSED | Maintainer-confirmed complete matrix pass. |
-| Health helper passes | PASSED | Maintainer-confirmed complete matrix pass; final release-candidate installer also reached completion after its mandatory health check. |
+| Health helper passes | PASSED | Maintainer-confirmed complete matrix pass; the final nesting-enabled reboot smoke check also passed `npm-lxc-healthcheck`. |
 | Administration helpers reachable by short `pct exec` command | PASSED | Maintainer-confirmed complete matrix pass for the supported `npm-lxc-healthcheck` helper. |
-| Full container reboot survives | PASSED | Maintainer-confirmed complete matrix pass on the earlier non-nesting configuration. The current `nesting=1` production configuration has a separate narrow reboot gate below. |
+| Full container reboot survives | PASSED | Maintainer-confirmed complete matrix pass and final production `nesting=1` reboot smoke pass. |
 | Persistent data survives reboot | PASSED | Maintainer-confirmed complete matrix pass with real proxy and certificate data. |
 
 ## Proxmox branding matrix
@@ -137,14 +137,14 @@ release-candidate checks cover host-side changes made after those tests.
 | Older cached Debian 13 template downloads current catalog template | NOT RUN | Version comparison/download behavior is regression-guarded in CI, but this exact older-cache branch was not explicitly observed during the final runtime run. It is not claimed as a runtime PASS. |
 | Missing Debian 13 template downloads automatically | NOT RUN | Automatic-download behavior is regression-guarded in CI, but this exact empty-cache branch was not explicitly observed during the final runtime run. It is not claimed as a runtime PASS. |
 | Fresh install and `npm-lxc-healthcheck` pass on pre-nesting release-candidate head | PASSED | Maintainer confirmed the final installation from `c7653f4cc712e6a2702988038a7f445d48e6445a` completed and works correctly. The installer executes `/usr/local/sbin/npm-lxc-healthcheck` before reporting successful service startup, so normal completion confirms the health check passed. |
-| Current CT configuration is unprivileged with `nesting=1` and keyctl disabled | RETEST | Current launcher now passes `--unprivileged 1 --features nesting=1` to `pct create` and does not enable keyctl. Requires real Proxmox confirmation. |
-| Proxmox start/reboot no longer reports the Systemd 257 nesting warning | RETEST | This is the reason for enabling nesting and must be observed on the real PVE host before promotion. |
-| Current nesting-enabled CT remains healthy after start/reboot | RETEST | Run the native health check after the start/reboot used for the warning test. The full NPM application matrix does not need to be repeated unless a regression is observed. |
+| Current CT configuration is unprivileged with `nesting=1` and keyctl disabled | PASSED | Maintainer confirmed the production CT remains unprivileged with `nesting=1`; keyctl remains disabled. |
+| Proxmox start/reboot no longer reports the Systemd 257 nesting warning | PASSED | Maintainer confirmed the warning disappeared after enabling nesting and rebooting the CT. |
+| Current nesting-enabled CT remains healthy after start/reboot | PASSED | Maintainer confirmed `npm-lxc-healthcheck` passed after the nesting-enabled reboot. |
 
-The final promotion gate is reopened only for the nesting-enabled Proxmox CT
-configuration. The two unobserved template-cache edge branches remain explicitly
-unclaimed runtime paths; they are guarded by automated tests and do not reopen
-the already-completed NPM runtime matrices.
+The final release-candidate promotion gate is complete. The two unobserved
+template-cache edge branches above remain explicitly unclaimed runtime paths;
+they are guarded by automated tests and do not reopen the already-completed NPM
+runtime matrices.
 
 ## Future lifecycle features
 
