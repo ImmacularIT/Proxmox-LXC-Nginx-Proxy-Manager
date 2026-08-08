@@ -49,7 +49,7 @@ ProtectControlGroups=true
 RestrictSUIDSGID=true
 LockPersonality=true
 RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
-ReadWritePaths=/data /etc/letsencrypt /etc/nginx/conf.d /etc/nginx-proxy-manager /run/nginx /var/backups/nginx-proxy-manager /var/lib/nginx /var/lib/logrotate /var/cache/nginx /var/log/nginx /opt/certbot
+ReadWritePaths=/data /etc/letsencrypt /etc/nginx/conf.d /etc/nginx-proxy-manager /run/nginx /var/lib/nginx /var/lib/logrotate /var/cache/nginx /var/log/nginx /opt/certbot
 
 [Install]
 WantedBy=multi-user.target
