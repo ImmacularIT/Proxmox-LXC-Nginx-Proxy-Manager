@@ -13,7 +13,7 @@
   "website": "https://github.com/NginxProxyManager/nginx-proxy-manager",
   "logo": "https://nginxproxymanager.com/github.png",
   "config_path": "/etc/nginx-proxy-manager/environment",
-  "description": "An unofficial native Debian 13 Proxmox LXC adaptation of the officially Docker-based Nginx Proxy Manager application. It builds the pinned official source and OpenResty environment without installing a nested container runtime.",
+  "description": "An unofficial native Debian 13 AMD64 Proxmox LXC adaptation of the officially Docker-based Nginx Proxy Manager application. It builds the pinned official source and OpenResty environment without installing a nested container runtime.",
   "install_methods": [
     {
       "type": "default",
@@ -30,7 +30,7 @@
   "notes": [
     {
       "type": "warning",
-      "text": "Development status: the native LXC installation and runtime test matrix have not yet been validated on Proxmox. Use only in a disposable test container with a snapshot."
+      "text": "Development status: real Proxmox VE 9.x runtime validation is active and many core application paths now pass, but the complete test matrix is not yet finished. Use a disposable test container until the remaining gates are recorded."
     },
     {
       "type": "info",
