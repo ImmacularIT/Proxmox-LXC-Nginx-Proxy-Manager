@@ -4,15 +4,14 @@ An independent ImmacularIT project that converts the official, Docker-based
 [Nginx Proxy Manager](https://github.com/NginxProxyManager/nginx-proxy-manager)
 application into a native Debian 13 Proxmox LXC installation.
 
-> **Development status:** the supported Nginx Proxy Manager v2.15.1 runtime
-> matrix has been exercised successfully on Proxmox VE 9.2.9 with Debian 13.6
-> AMD64. Container creation, native build/services, Proxmox branding, the
-> application feature matrix, the final fresh-install health smoke test, and the
-> final nesting-enabled start/reboot smoke check all pass. The pull request
-> remains a development draft pending explicit maintainer approval to promote.
-> Backup/restore and adaptation-level in-place update tooling are future
-> ImmacularIT project options and are not part of the current supported feature
-> set.
+> **Release status:** the supported Nginx Proxy Manager v2.15.1 runtime matrix
+> has been exercised successfully on Proxmox VE 9.2.9 with Debian 13.6 AMD64.
+> Container creation, native build/services, Proxmox branding, the application
+> feature matrix, the final fresh-install health smoke test, and the final
+> nesting-enabled start/reboot smoke check all pass. The validated release was
+> promoted to `main` on 2026-08-08. Backup/restore and adaptation-level in-place
+> update tooling are future ImmacularIT project options and are not part of the
+> current supported feature set.
 
 ## Pinned upstream
 
@@ -55,15 +54,17 @@ mean a nested Docker/Podman/Kubernetes runtime is installed or used.
 
 See [docs/PROJECT-HANDOFF.md](docs/PROJECT-HANDOFF.md) for the complete Docker-to-LXC mapping.
 
-## Development installation
+## Installation
 
-Run this on a Proxmox VE 9.x AMD64 host while this branch remains under final
-release review:
+Run this directly on a Proxmox VE 9.x AMD64 host:
 
 ```bash
 bash <(curl -fsSL \
-  https://raw.githubusercontent.com/ImmacularIT/Proxmox-LXC-Nginx-Proxy-Manager/develop/native-lxc-v2.15.1/ct/nginx-proxy-manager.sh)
+  https://raw.githubusercontent.com/ImmacularIT/Proxmox-LXC-Nginx-Proxy-Manager/main/ct/nginx-proxy-manager.sh)
 ```
+
+The launcher defaults all project self-fetches to `main`. `NPM_PROJECT_REF` can
+still be set explicitly when testing a future development branch.
 
 The host launcher is project-owned and uses Proxmox's own `pct`, `pveam`,
 `pvesm`, and `pvesh` commands directly. It does not load an unrelated script
