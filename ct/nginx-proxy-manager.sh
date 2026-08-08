@@ -7,7 +7,7 @@ set -Eeuo pipefail
 APP="Nginx Proxy Manager"
 PROJECT_OWNER="ImmacularIT"
 PROJECT_REPO="Proxmox-LXC-Nginx-Proxy-Manager"
-PROJECT_REF="${NPM_PROJECT_REF:-develop/native-lxc-v2.15.1}"
+PROJECT_REF="${NPM_PROJECT_REF:-main}"
 PROJECT_URL="https://github.com/${PROJECT_OWNER}/${PROJECT_REPO}"
 PROJECT_INSTALL_URL="https://raw.githubusercontent.com/${PROJECT_OWNER}/${PROJECT_REPO}/${PROJECT_REF}/install/nginx-proxy-manager-install.sh"
 UPSTREAM_PROJECT_URL="https://github.com/NginxProxyManager/nginx-proxy-manager"
