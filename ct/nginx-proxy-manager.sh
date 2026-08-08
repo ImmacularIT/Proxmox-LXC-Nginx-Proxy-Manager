@@ -482,6 +482,7 @@ create_args=(
   --swap 512
   --rootfs "${ROOT_STORAGE}:${DISK}"
   --unprivileged 1
+  --features nesting=1
   --ostype debian
   --net0 "$net0"
   --onboot "$ONBOOT"
