@@ -421,11 +421,17 @@ handle_install_failure() {
 
 show_welcome
 
-method=$(whiptail --backtitle "$BACKTITLE" --title "INSTALL METHOD" \
-  --menu "\nChoose how to configure the Debian 13 unprivileged LXC:" 15 76 2 \
-  "default" "Recommended defaults with identity/network prompts" \
-  "advanced" "Also customize CPU, RAM and disk" \
-  --default-item "default" 3>&1 1>&2 2>&3) || exit 0
+method_choice=$(whiptail --backtitle "$BACKTITLE" --title "INSTALL OPTIONS" \
+  --ok-button "Select" --cancel-button "Exit Script" \
+  --menu "\nChoose an option:" 14 62 2 \
+  "Default Install" "" \
+  "Advanced Install" "" \
+  --default-item "Default Install" 3>&1 1>&2 2>&3) || exit 0
+case "$method_choice" in
+  "Default Install") method="default" ;;
+  "Advanced Install") method="advanced" ;;
+  *) fatal "Unknown install method selection: ${method_choice}" ;;
+esac
 
 prompt_identity
 ROOT_STORAGE="$(select_storage)"
