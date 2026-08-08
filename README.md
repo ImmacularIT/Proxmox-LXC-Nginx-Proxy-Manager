@@ -5,15 +5,16 @@ An independent ImmacularIT project that converts the official, Docker-based
 application into a native Debian 13 Proxmox LXC installation.
 
 > **Development status:** active runtime validation is in progress on Proxmox
-> VE 9.2.9 with Debian 13.6 AMD64. Fresh native installation, first-run setup,
-> administrator management, TOTP, correct GUI version reporting, HTTP proxying,
-> WebSockets, Let's Encrypt HTTP challenges for multiple real subdomains, Force
-> SSL, full-container reboot, persistent application data, and the complete
-> native health check have all been exercised successfully. The project remains
-> a development draft while the remaining proxy variants, certificate renewal
-> and import paths, backup/restore, update/rollback, branding, and other matrix
-> items are completed. Use only a disposable test container until the runtime
-> matrix is complete.
+> VE 9.2.9 with Debian 13.6 AMD64. The complete Container creation, Build and
+> service, Proxmox branding, and Application feature matrices have now been
+> exercised successfully, including fresh installation, static/DHCP networking,
+> Advanced Install, service recovery, HTTP/HTTPS/WebSocket and stream proxying,
+> HTTP/3, access lists, certificate import, Let's Encrypt HTTP and DNS flows,
+> renewal, first-run setup, administrators/TOTP, reboot/service persistence,
+> logging, and correct runtime/GUI version reporting. The project remains a
+> development draft only while the Backup, restore, and update matrix is
+> completed. Use only a disposable test container until the runtime matrix is
+> complete.
 
 ## Pinned upstream
 
@@ -161,11 +162,10 @@ no-telemetry launcher/installer invariants, automatic template-storage handling,
 no unnecessary LXC nesting/keyctl features, AMD64-only target enforcement, and
 obvious private-key or token patterns.
 
-Real Proxmox validation has progressed beyond basic startup: the native stack,
-first-run workflow, administrators/TOTP, HTTP and WebSocket proxying, production
-Let's Encrypt issuance, Force SSL, reboot persistence, correct GUI version, and
-health checks have all passed on Debian 13.6 AMD64. These checks do not replace
-the remaining runtime tests. See [docs/RUNTIME-TEST-PLAN.md](docs/RUNTIME-TEST-PLAN.md).
+Real Proxmox validation has now passed the complete Container creation, Build and
+service, Proxmox branding, and Application feature matrices on Debian 13.6 AMD64.
+Only the Backup, restore, and update matrix remains open before the runtime plan
+is complete. See [docs/RUNTIME-TEST-PLAN.md](docs/RUNTIME-TEST-PLAN.md).
 
 ## Project identity
 
