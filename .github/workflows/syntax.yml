@@ -28,6 +28,7 @@ jobs:
         run: |
           python3 -m json.tool json/nginx-proxy-manager.json >/dev/null
           python3 tests/validate_repository.py
+          bash tests/validate_template_selection.sh
 
       - name: Validate native executable paths and startup readiness
         run: |
