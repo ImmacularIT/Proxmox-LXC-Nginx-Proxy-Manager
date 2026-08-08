@@ -22,6 +22,7 @@ Runtime-validation instances:
 - 2026-08-07: Proxmox VE 9.2.9, kernel 7.0.14-9-pve; Debian 13.6 AMD64; unprivileged CT 901; DHCP IPv4 192.168.1.110. This instance reached a working backend/OpenResty/UI stack after targeted fixes.
 - 2026-08-08: same PVE/template/privilege model; fresh Default Install CT 901; DHCP IPv4 192.168.1.113. This clean run stopped during the OpenResty preparation stage when the LuaRocks executable was installed under `/usr/local/bin` but then looked up through an environment-dependent `PATH`.
 - 2026-08-08: same PVE/template/privilege model; subsequent fresh Default Install CT 901 completed end-to-end without installer errors after the LuaRocks, OpenResty readiness, launcher completion, installer-UX, template-storage, nesting/keyctl, and runtime-version fixes. A post-install `/usr/local/sbin/npm-lxc-healthcheck` invocation passed every native health check. Direct `pct exec 901 -- npm-lxc-healthcheck` initially failed only because Proxmox's direct command PATH omitted `/usr/local/sbin`; the helper itself was present and healthy. Follow-up commit `d3b6e01dde02d1ee57215e02ccc4b0583c2cc91f` exposes the user-facing administration helpers through `/usr/local/bin` as well. The same CT then survived `pct reboot 901` with nesting disabled: Proxmox emitted its generic Systemd 257 nesting warning, the task completed, CT 901 returned to `running`, the complete native health check passed again, and DHCP assigned 192.168.1.117.
+- 2026-08-08: a new unprivileged Debian 13.6 CT 901 received DHCP IPv4 192.168.1.118 and was used for the first real Let's Encrypt HTTP-challenge test. Runtime tracing exposed three native-systemd compatibility requirements before Certbot could run: the unprivileged backend needs `CAP_NET_BIND_SERVICE` for upstream's child `nginx -t`, the backend's `PrivateTmp` namespace needs the official `/tmp/nginx` path bound to its service-owned cache directory, and upstream's `-g "error_log off;"` test requires a read-only-safe `/etc/nginx/nginx/off -> /dev/null` compatibility target. After those fixes, Certbot 5.6.0 reached the production Let's Encrypt ACME API successfully. The first ACME registration was then correctly rejected because the deliberately fake NPM account email `test@example.com` uses the forbidden `example.com` domain; replacing it with a real email allowed certificate issuance for `oiko.iclust.se` to succeed.
 
 ## Container creation matrix
 
@@ -60,7 +61,7 @@ Runtime-validation instances:
 | Backend native dependencies compile | PASSED | Clean CT 901 completed production backend dependency installation and immutable release creation. |
 | OpenResty 1.29.2.5 build completes | PASSED | Clean CT 901 completed the native OpenResty 1.29.2.5 source build with the absolute LuaRocks path fix in place. |
 | HTTP/3, stream, Lua and GeoIP2 flags present | NOT RUN | |
-| Certbot 5.6.0 works | PASSED | Reconfirmed 2026-08-08 fresh run with pyOpenSSL 26.2.0 and cryptography 48.0.0; dependency check passed. |
+| Certbot 5.6.0 works | PASSED | Reconfirmed 2026-08-08 fresh run with pyOpenSSL 26.2.0 and cryptography 48.0.0; dependency check passed. The later real ACME flow also launched Certbot 5.6.0 successfully and contacted the production Let's Encrypt directory. |
 | SQLite database initializes | PASSED | Clean CT 901 selected `/data/database.sqlite`, initialized the database and created JWT keys. |
 | Official migrations complete | PASSED | Clean CT 901 completed the official migration chain before the backend began listening. |
 | Backend systemd startup | PASSED | Latest clean run started the backend successfully and health validation confirmed port 3000 listening. Earlier empty-custom-include defect was fixed by `3d782a82f011f62e707666d7f81d4b1cabd4e17a`. |
@@ -101,7 +102,7 @@ Runtime-validation instances:
 | Access list behavior | NOT RUN | |
 | HTTP-to-HTTPS redirect | NOT RUN | |
 | Certificate import | NOT RUN | |
-| Let's Encrypt HTTP challenge | NOT RUN | |
+| Let's Encrypt HTTP challenge | PASSED | 2026-08-08 CT 901 / 192.168.1.118: NPM generated and reloaded the temporary ACME Nginx configuration, launched Certbot 5.6.0 with the production `acme-v02.api.letsencrypt.org` HTTP/webroot flow, and obtained a certificate for `oiko.iclust.se` after the NPM administrator email was changed from the deliberately invalid `test@example.com` to a real address. The preceding `invalidContact` response was an expected Let's Encrypt rejection of the reserved `example.com` domain, not a runtime defect. |
 | DNS challenge plugin installation | NOT RUN | |
 | Certificate renewal | NOT RUN | |
 | Stream proxy | NOT RUN | |
