@@ -24,7 +24,7 @@ Runtime-validation instances:
 - 2026-08-08: repeated fresh Default Install runs on the same PVE/template/privilege model validated the LuaRocks/OpenResty path fixes, startup readiness, independent launcher completion, installer UX, template-storage behavior, no nesting/keyctl requirement, runtime version metadata, and helper-command behavior.
 - 2026-08-08: real certificate tracing exposed three native-systemd compatibility requirements before Certbot could complete: backend `CAP_NET_BIND_SERVICE` for upstream child `nginx -t`, a backend `PrivateTmp` mapping for the official `/tmp/nginx` path, and a read-only-safe `/etc/nginx/nginx/off -> /dev/null` compatibility target for upstream's `error_log off` test. These were fixed and regression-guarded.
 - 2026-08-08: a subsequent fresh clean installation with those fixes integrated successfully issued production Let's Encrypt certificates for three real subdomains. HTTP proxying, Force SSL, WebSockets, first-run setup, administrator management, TOTP, correct `v2.15.1` GUI/version reporting, reboot persistence, and Proxmox branding were also confirmed.
-- 2026-08-08: the maintainer confirmed the complete Container creation, Build and service, and Application feature matrices below all pass on the tested Proxmox VE 9.2.9 / Debian 13.6 AMD64 environment.
+- 2026-08-08: the maintainer confirmed the complete Container creation, Build and service, Proxmox branding, and Application feature matrices below all pass on the tested Proxmox VE 9.2.9 / Debian 13.6 AMD64 environment.
 
 ## Container creation matrix
 
@@ -74,7 +74,7 @@ The maintainer confirmed the complete matrix below as passing on 2026-08-08.
 | OpenResty systemd startup | PASSED | Maintainer-confirmed complete matrix pass with hardened native services. |
 | Restart policies recover processes | PASSED | Maintainer-confirmed complete matrix pass. |
 | Health helper passes | PASSED | Maintainer-confirmed complete matrix pass. |
-| Administration helpers reachable by short `pct exec` command | PASSED | Maintainer-confirmed complete matrix pass. |
+| Administration helpers reachable by short `pct exec` command | PASSED | Maintainer-confirmed complete matrix pass for the supported `npm-lxc-healthcheck` helper. |
 | Full container reboot survives | PASSED | Maintainer-confirmed complete matrix pass with nesting disabled. |
 | Persistent data survives reboot | PASSED | Maintainer-confirmed complete matrix pass with real proxy and certificate data. |
 
@@ -123,21 +123,21 @@ The maintainer confirmed the complete matrix below as passing on 2026-08-08.
 | Proxy hosts survive service restart | PASSED | Maintainer-confirmed complete matrix pass. |
 | Certificates survive service restart | PASSED | Maintainer-confirmed complete matrix pass. |
 
-## Backup, restore, and update matrix
+## Future lifecycle features
 
-This is now the only runtime matrix section that remains open.
+The supported Nginx Proxy Manager v2.15.1 runtime matrix is complete above.
+Backup/restore and adaptation-level in-place update/rollback tooling are not
+upstream NPM application features and are not release gates for this native
+adaptation. They may be designed and validated as separate future ImmacularIT
+project features.
 
-| Test | Status | Evidence / notes |
-|---|---|---|
-| Backup archive and checksum created | NOT RUN | |
-| SQLite online backup is consistent | NOT RUN | |
-| Secrets have restrictive permissions | NOT RUN | |
-| Restore into disposable instance | NOT RUN | |
-| Restored proxy hosts work | NOT RUN | |
-| Restored certificates work | NOT RUN | |
-| Update builds new release directory | NOT RUN | |
-| Pre-update snapshot and backup | NOT RUN | |
-| Official migration during update | NOT RUN | |
-| Atomic active-release switch | NOT RUN | |
-| Post-update health checks | NOT RUN | |
-| Failed-update rollback procedure | NOT RUN | |
+The current project metadata therefore uses `updateable: false`, and the
+installer does not ship `npm-lxc-backup`, `npm-lxc-restore`, or
+`npm-lxc-update` commands. NPM's own certificate import and certificate download
+behavior remains part of the Application feature matrix above.
+
+When the original NPM author publishes a new release, maintain it as a new
+adaptation cycle: create a new development branch, update and review exact
+upstream pins, inspect Docker/runtime/build/migration changes, run repository CI,
+perform a fresh Proxmox installation, and repeat the runtime validation required
+for the changed release before promoting it.
