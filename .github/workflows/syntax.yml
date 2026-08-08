@@ -1,0 +1,77 @@
+name: Repository validation
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Validate Bash syntax
+        run: |
+          find ct install scripts tests lib -type f -name '*.sh' -print0 \
+            | xargs -0 -n1 bash -n
+
+      - name: Run ShellCheck
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y shellcheck
+          shellcheck --severity=error -x ct/*.sh install/*.sh scripts/*.sh tests/*.sh lib/*.sh
+
+      - name: Validate JSON and repository invariants
+        run: |
+          python3 -m json.tool json/nginx-proxy-manager.json >/dev/null
+          python3 tests/validate_repository.py
+          bash tests/validate_template_selection.sh
+
+      - name: Validate native executable paths and startup readiness
+        run: |
+          grep -Fq 'LUAROCKS_BIN="/usr/local/bin/luarocks"' scripts/build-openresty-native.sh
+          grep -Fq '[[ -x "$LUAROCKS_BIN" ]]' scripts/build-openresty-native.sh
+          test "$(grep -Ec '^[[:space:]]*luarocks[[:space:]]' scripts/build-openresty-native.sh || true)" -eq 0
+          grep -Fq 'wait_for_nginx_listeners' scripts/npm-healthcheck.sh
+          grep -Fq 'for attempt in {1..30}' scripts/npm-healthcheck.sh
+          grep -Fq 'systemctl is-active --quiet nginx-proxy-manager-nginx.service || return 1' scripts/npm-healthcheck.sh
+          test "$(grep -c '^AmbientCapabilities=CAP_NET_BIND_SERVICE$' systemd/nginx-proxy-manager-backend.service)" -eq 1
+          test "$(grep -c '^CapabilityBoundingSet=CAP_NET_BIND_SERVICE$' systemd/nginx-proxy-manager-backend.service)" -eq 1
+          test "$(grep -c '^CacheDirectory=nginx/tmp$' systemd/nginx-proxy-manager-backend.service)" -eq 1
+          test "$(grep -c '^CacheDirectoryMode=0750$' systemd/nginx-proxy-manager-backend.service)" -eq 1
+          test "$(grep -c '^BindPaths=/var/cache/nginx/tmp:/tmp/nginx$' systemd/nginx-proxy-manager-backend.service)" -eq 1
+          grep -Fq 'nginx_test_log="${nginx_test_log_dir}/off"' scripts/npm-prepare.sh
+          grep -Fq 'ln -s /dev/null "$nginx_test_log"' scripts/npm-prepare.sh
+          test "$(grep '^ReadWritePaths=' systemd/nginx-proxy-manager-backend.service | tr ' ' '\n' | grep -Fxc '/etc/nginx' || true)" -eq 0
+
+      - name: Validate systemd units
+        run: |
+          sudo install -m 0755 scripts/npm-prepare.sh /usr/local/sbin/npm-lxc-prepare
+          test -x /usr/bin/node || sudo ln -sf /bin/true /usr/bin/node
+          test -x /usr/sbin/nginx || sudo ln -sf /bin/true /usr/sbin/nginx
+          systemd-analyze verify systemd/*.service
+
+      - name: Validate remote branding PNG signatures
+        run: |
+          set -euo pipefail
+          urls=(
+            'https://nginxproxymanager.com/github.png'
+            'https://raw.githubusercontent.com/ImmacularIT/Proxmox-Itiligent-Guacamole/15c268e6fd0e6f9b441aa9f785c278c3f580171b/assets/immacularit-logo.png'
+          )
+          for url in "${urls[@]}"; do
+            file="$(mktemp)"
+            curl -fsSL --retry 3 "$url" -o "$file"
+            python3 -c 'import sys; from pathlib import Path; p=Path(sys.argv[1]); data=p.read_bytes(); assert data.startswith(bytes.fromhex("89504e470d0a1a0a")), f"Not a PNG: {p}"; assert len(data) > 1024, f"Branding asset unexpectedly small: {p}"' "$file"
+            rm -f "$file"
+          done
+
+      - name: Verify pinned upstream conversion markers
+        run: tests/verify_upstream.sh
+
+      - name: Scan for accidental secrets and private keys
+        run: |
+          ! grep -RInE --exclude-dir=.git \
+            '(BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY|ghp_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{30,})' .
