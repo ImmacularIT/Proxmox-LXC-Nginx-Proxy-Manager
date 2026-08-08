@@ -36,7 +36,9 @@ selected Git blob IDs before building. It does not install from `develop`,
 ## Native architecture
 
 The final container does not require Docker, Docker Compose, Podman,
-Kubernetes, or a nested container runtime.
+Kubernetes, or another nested container runtime. The Proxmox `nesting=1`
+container feature described below is an LXC compatibility setting; it does not
+mean a nested Docker/Podman/Kubernetes runtime is installed or used.
 
 - The official frontend is built with the pinned Yarn lockfile and served as
   static files by OpenResty.
