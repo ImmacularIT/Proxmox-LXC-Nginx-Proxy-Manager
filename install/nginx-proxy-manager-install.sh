@@ -13,7 +13,7 @@ export DEBIAN_FRONTEND=noninteractive
 
 PROJECT_OWNER="ImmacularIT"
 PROJECT_REPO="Proxmox-LXC-Nginx-Proxy-Manager"
-PROJECT_REF="${NPM_PROJECT_REF:-develop/native-lxc-v2.15.1}"
+PROJECT_REF="${NPM_PROJECT_REF:-main}"
 PROJECT_RAW="https://raw.githubusercontent.com/${PROJECT_OWNER}/${PROJECT_REPO}/${PROJECT_REF}"
 EXPECTED_NPM_COMMIT="76f09db610cfcaecf6d608a8947d6f75aa028870"
 EXPECTED_NPM_BASE_COMMIT="fe5ba055ed29033a619e9103bef5d8218fe1fab0"
