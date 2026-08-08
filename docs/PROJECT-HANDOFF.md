@@ -5,8 +5,8 @@ maintenance workflow, and runtime evidence for
 `ImmacularIT/Proxmox-LXC-Nginx-Proxy-Manager`.
 
 **Status snapshot:** 2026-08-08  
-**Project state:** development draft; supported v2.15.1 runtime matrix complete; final nesting warning smoke pending  
-**Target platform:** Proxmox VE 9.x, unprivileged Debian 13 AMD64 LXC with `nesting=1`, keyctl disabled  
+**Project state:** development draft; supported v2.15.1 runtime matrix complete  
+**Target platform:** Proxmox VE 9.x, unprivileged Debian 13 AMD64 LXC with `nesting=1`  
 **Pinned upstream release:** `v2.15.1`  
 **Pinned upstream commit:** `76f09db610cfcaecf6d608a8947d6f75aa028870`  
 **Pinned official base-image source:** `fe5ba055ed29033a619e9103bef5d8218fe1fab0`
@@ -123,30 +123,31 @@ The launcher:
    VLAN;
 8. allows CPU/RAM/disk overrides only in Advanced mode;
 9. shows the complete user-facing configuration for confirmation;
-10. refreshes the official Proxmox appliance catalog and resolves Debian template-cache storage automatically after confirmation;
-11. reuses or downloads the newest appropriate official Debian 13 AMD64 Proxmox template;
-12. creates an unprivileged container with native `pct create` and the fixed `nesting=1` feature while leaving keyctl disabled;
+10. resolves Debian template-cache storage automatically after confirmation;
+11. reuses or downloads an official Debian 13 AMD64 Proxmox template;
+12. creates an unprivileged container with native `pct create` and fixed
+    `nesting=1`; keyctl remains disabled;
 13. starts the CT and runs this repository's container installer;
 14. runs the native health check;
 15. applies project tags and project-specific Proxmox description/branding;
 16. reports the administration URL on port 81.
 
-Default resources are 2 CPU cores, 4096 MiB RAM, and a 16 GiB root disk. The
-container remains unprivileged. `nesting=1` is enabled as a production
-compatibility default to suppress Proxmox's recurring Systemd 257 nesting
-warning; keyctl is not enabled. Earlier runtime testing demonstrated that Nginx
-Proxy Manager itself does not require nesting or a nested container runtime.
+Default resources are 2 CPU cores, 4096 MiB RAM, and a 16 GiB root disk.
+The production launcher enables Proxmox `nesting=1` to avoid the recurring
+Systemd 257 start warning while retaining an unprivileged CT and leaving keyctl
+disabled. The application itself does not require a nested runtime.
 
-The Proxmox nesting feature broadens the guest's visibility of some host kernel
-filesystems compared with a non-nesting LXC. That tradeoff is documented and
-accepted for the production default; the application services remain hardened
-and the CT remains unprivileged.
+Enabling Proxmox nesting broadens guest visibility of some host kernel
+filesystems compared with a non-nesting LXC. This tradeoff is accepted for the
+production default to avoid the recurring Proxmox task warning; Docker, Podman,
+Kubernetes, and other nested application runtimes remain absent.
 
 Template storage is intentionally not a normal installer question. The launcher
-prefers an active `vztmpl` storage already containing the newest Debian 13 AMD64
-template, then an existing Debian 13 template cache, then conventional `local`,
-then the first active template-capable storage. Administrators may override the
-internal selection with `NPM_TEMPLATE_STORAGE=<storage>`.
+refreshes the Proxmox appliance catalog before template selection, prefers an
+active `vztmpl` storage already containing the newest Debian 13 AMD64 template,
+then an existing Debian 13 cache, then conventional `local`, then the first
+active template-capable storage. Administrators may override the internal
+selection with `NPM_TEMPLATE_STORAGE=<storage>`.
 
 The launcher sends no project installation telemetry or usage data.
 
@@ -302,13 +303,12 @@ SSL, certificate import, HTTP and DNS certificate workflows, renewal, stream,
 HTTP/3, logs, reboot/service persistence, correct v2.15.1 reporting, and the
 branding/tag checks.
 
-A final fresh-install health smoke test also passed before the last host-side
-configuration change. The production default was then changed to `nesting=1`
-while remaining unprivileged and keeping keyctl disabled, solely to eliminate
-the recurring Proxmox Systemd 257 nesting warning. The only open release gate is
-therefore a narrow real-host start/reboot confirmation that the warning is gone
-and the native health check still passes. The authoritative detailed record is
-`docs/RUNTIME-TEST-PLAN.md`.
+The final production configuration was additionally confirmed as unprivileged
+with `nesting=1` and keyctl disabled. A real Proxmox reboot/start no longer
+produced the Systemd 257 nesting warning, and `npm-lxc-healthcheck` passed after
+the reboot. The final release-candidate runtime gate is therefore complete.
+
+The authoritative detailed record is `docs/RUNTIME-TEST-PLAN.md`.
 
 ## Lifecycle scope
 
@@ -335,8 +335,7 @@ automatic updater. For each upstream release:
 4. review the exact official base-image/OpenResty source revision;
 5. refresh version/blob pins only after reviewing diffs;
 6. run repository CI;
-7. build a fresh unprivileged Debian 13 AMD64 LXC with the project's current
-   validated Proxmox feature defaults;
+7. build a fresh unprivileged Debian 13 AMD64 LXC on supported Proxmox VE;
 8. repeat the runtime validation required for the changed release;
 9. keep the PR Draft and `main` untouched until the required gates pass and the
    maintainer explicitly approves promotion.
