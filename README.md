@@ -4,17 +4,13 @@ An independent ImmacularIT project that converts the official, Docker-based
 [Nginx Proxy Manager](https://github.com/NginxProxyManager/nginx-proxy-manager)
 application into a native Debian 13 Proxmox LXC installation.
 
-> **Development status:** active runtime validation is in progress on Proxmox
-> VE 9.2.9 with Debian 13.6 AMD64. The complete Container creation, Build and
-> service, Proxmox branding, and Application feature matrices have now been
-> exercised successfully, including fresh installation, static/DHCP networking,
-> Advanced Install, service recovery, HTTP/HTTPS/WebSocket and stream proxying,
-> HTTP/3, access lists, certificate import, Let's Encrypt HTTP and DNS flows,
-> renewal, first-run setup, administrators/TOTP, reboot/service persistence,
-> logging, and correct runtime/GUI version reporting. The project remains a
-> development draft only while the Backup, restore, and update matrix is
-> completed. Use only a disposable test container until the runtime matrix is
-> complete.
+> **Development status:** the supported Nginx Proxy Manager v2.15.1 runtime
+> matrix has been exercised successfully on Proxmox VE 9.2.9 with Debian 13.6
+> AMD64. Container creation, native build/services, Proxmox branding, and the
+> application feature matrix all pass. The pull request remains a development
+> draft pending final release review. Backup/restore and adaptation-level
+> in-place update tooling are future ImmacularIT project options and are not
+> part of the current supported feature set.
 
 ## Pinned upstream
 
@@ -57,7 +53,8 @@ See [docs/PROJECT-HANDOFF.md](docs/PROJECT-HANDOFF.md) for the complete Docker-t
 
 ## Development installation
 
-Run this only on a disposable Proxmox VE 9.x test host:
+Run this on a Proxmox VE 9.x AMD64 host while this branch remains under final
+release review:
 
 ```bash
 bash <(curl -fsSL \
@@ -128,7 +125,6 @@ Open `http://CONTAINER-IP:81` and complete the official wizard.
 | `/etc/nginx-proxy-manager/installation.json` | Installed-version manifest |
 | `/etc/nginx` | Official Nginx/OpenResty templates and generated includes |
 | `/opt/certbot` | Pinned Certbot virtual environment and DNS plugins |
-| `/var/backups/nginx-proxy-manager` | Protected backup archives |
 
 ## Service and maintenance commands
 
@@ -138,20 +134,26 @@ systemctl status nginx-proxy-manager-nginx.service
 journalctl -u nginx-proxy-manager-backend.service
 journalctl -u nginx-proxy-manager-nginx.service
 npm-lxc-healthcheck
-npm-lxc-backup
-npm-lxc-restore --archive /var/backups/nginx-proxy-manager/<archive>.tar.gz
 ```
 
-Updates are never automatic. A reviewed adaptation version manifest must be
-provided explicitly:
+## Lifecycle scope and upstream updates
 
-```bash
-npm-lxc-update --version-file /root/validated-versions.sh
-```
+Nginx Proxy Manager v2.15.1 does not provide an application-level backup/restore
+workflow for this adaptation. The project therefore does not ship
+`npm-lxc-backup`, `npm-lxc-restore`, or `npm-lxc-update`, and project metadata is
+set to `updateable: false`.
 
-The update helper builds a new versioned release, creates a backup, switches the
-active symlink, lets the official backend run its migrations, checks health,
-and retains rollback guidance and the backup path.
+NPM's own certificate-management features remain available, including importing
+a custom certificate and downloading an existing certificate through the
+application where supported.
+
+When the original NPM project publishes a new release, treat it as a new native
+adaptation cycle rather than an automatic in-place upgrade. Create a new
+development branch, pin and review the new exact upstream revisions, inspect
+Docker/build/runtime/migration changes, run CI, build a fresh Proxmox LXC, and
+repeat the runtime validation appropriate to that release before promotion.
+Backup/restore or migration tooling across native adaptation releases may be
+added later as separately designed and validated ImmacularIT features.
 
 ## Validation status
 
@@ -159,13 +161,14 @@ Repository checks cover Bash and JSON syntax, systemd units, required metadata,
 version pins, Docker-derived source markers, branding PNG signatures, forbidden
 nested-runtime installation commands, moving upstream branch URLs, explicit
 no-telemetry launcher/installer invariants, automatic template-storage handling,
-no unnecessary LXC nesting/keyctl features, AMD64-only target enforcement, and
-obvious private-key or token patterns.
+no unnecessary LXC nesting/keyctl features, AMD64-only target enforcement,
+certificate-workflow compatibility, lifecycle-scope invariants, and obvious
+private-key or token patterns.
 
-Real Proxmox validation has now passed the complete Container creation, Build and
-service, Proxmox branding, and Application feature matrices on Debian 13.6 AMD64.
-Only the Backup, restore, and update matrix remains open before the runtime plan
-is complete. See [docs/RUNTIME-TEST-PLAN.md](docs/RUNTIME-TEST-PLAN.md).
+Real Proxmox validation on PVE 9.2.9 / Debian 13.6 AMD64 has completed the
+supported v2.15.1 runtime plan: Container creation, Build and service, Proxmox
+branding, and Application feature matrices are all recorded as PASSED. See
+[docs/RUNTIME-TEST-PLAN.md](docs/RUNTIME-TEST-PLAN.md) for the recorded evidence.
 
 ## Project identity
 
