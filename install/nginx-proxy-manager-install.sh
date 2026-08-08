@@ -52,11 +52,7 @@ service_diagnostics() {
 [[ "$(id -u)" -eq 0 ]] || fatal "The container installer must run as root"
 [[ "$(. /etc/os-release; printf '%s' "$ID")" == "debian" ]] || fatal "Debian is required"
 [[ "$(. /etc/os-release; printf '%s' "$VERSION_ID")" == "13" ]] || fatal "Debian 13 is required"
-case "$(dpkg --print-architecture)" in
-  amd64) ;;
-  arm64) fatal "ARM64 is not enabled until a complete native runtime test passes" ;;
-  *) fatal "Unsupported architecture: $(dpkg --print-architecture)" ;;
-esac
+[[ "$(dpkg --print-architecture)" == "amd64" ]] || fatal "AMD64 is required"
 
 info "Checking required project and upstream DNS"
 for host in github.com raw.githubusercontent.com deb.nodesource.com openresty.org luarocks.org; do
