@@ -5,14 +5,15 @@ maintenance workflow, and runtime evidence for
 `ImmacularIT/Proxmox-LXC-Nginx-Proxy-Manager`.
 
 **Status snapshot:** 2026-08-08  
-**Project state:** development draft; supported v2.15.1 runtime matrix complete  
+**Project state:** released on `main`; supported v2.15.1 runtime matrix complete  
 **Target platform:** Proxmox VE 9.x, unprivileged Debian 13 AMD64 LXC with `nesting=1`  
 **Pinned upstream release:** `v2.15.1`  
 **Pinned upstream commit:** `76f09db610cfcaecf6d608a8947d6f75aa028870`  
 **Pinned official base-image source:** `fe5ba055ed29033a619e9103bef5d8218fe1fab0`
 
-Keep the development pull request Draft until final release review is complete
-and the maintainer explicitly chooses to promote it.
+Nginx Proxy Manager v2.15.1 was promoted to `main` on 2026-08-08 after the
+required automated and real-Proxmox gates passed and the maintainer explicitly
+approved promotion.
 
 ## Executive summary
 
