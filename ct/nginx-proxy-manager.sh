@@ -68,7 +68,7 @@ PVE_VERSION="$(printf '%s' "$PVE_RAW" | awk -F'/' '{print $2}' | awk -F'-' '{pri
 show_welcome() {
   whiptail --backtitle "$BACKTITLE" --title "WELCOME" \
     --ok-button "Continue" \
-    --msgbox "\nThis independent ImmacularIT installer creates an unprivileged Debian 13 LXC and installs Nginx Proxy Manager natively.\n\nThe final container does not require Docker, Podman, Kubernetes, or another nested container runtime.\n\nDefault Install asks only for user-facing container choices. Debian template storage is selected automatically by the launcher.\n\nYou can review the complete container configuration before anything is created.\n\nNo installation telemetry or usage data is sent by this launcher." \
+    --msgbox "\nThis independent ImmacularIT installer creates an unprivileged Debian 13 LXC and installs Nginx Proxy Manager natively.\n\nThe final container does not require Docker, Podman, Kubernetes, or another nested container runtime.\n\nDefault Install asks only for user-facing container choices. Debian template storage and the latest available Debian 13 AMD64 template are handled automatically by the launcher.\n\nYou can review the complete container configuration before anything is created.\n\nNo installation telemetry or usage data is sent by this launcher." \
     21 78
 }
 
@@ -152,7 +152,7 @@ select_storage() {
 }
 
 resolve_template_storage() {
-  local requested="${TEMPLATE_STORAGE:-}" storage
+  local latest_template="${1:-}" requested="${TEMPLATE_STORAGE:-}" storage
   local -a stores=()
   mapfile -t stores < <(pvesm status --content vztmpl 2>/dev/null | awk 'NR > 1 && $3 == "active" {print $1}')
   [[ ${#stores[@]} -gt 0 ]] || fatal "No active Proxmox storage supports container templates (vztmpl)"
@@ -167,8 +167,24 @@ resolve_template_storage() {
     fatal "Requested template storage is not active or does not support vztmpl: ${requested}"
   fi
 
-  # Prefer an active storage that already has a Debian 13 AMD64 template so
-  # normal runs do not redownload or expose template-cache placement to users.
+  # Prefer a storage that already contains the exact newest catalog template.
+  # This avoids an unnecessary duplicate download when the latest template is
+  # cached outside Proxmox's conventional `local` storage.
+  if [[ -n "$latest_template" ]]; then
+    for storage in "${stores[@]}"; do
+      if pveam list "$storage" 2>/dev/null \
+        | awk -v wanted="vztmpl/${latest_template}" '
+            length($1) >= length(wanted) && substr($1, length($1) - length(wanted) + 1) == wanted {found=1}
+            END {exit !found}
+          '; then
+        printf '%s' "$storage"
+        return 0
+      fi
+    done
+  fi
+
+  # If the latest catalog template is not cached anywhere, prefer a storage
+  # already used for Debian 13 templates so the cache stays consolidated.
   for storage in "${stores[@]}"; do
     if pveam list "$storage" 2>/dev/null \
       | awk '$1 ~ /debian-13-standard_.*_amd64\.tar\.zst$/ {found=1} END {exit !found}'; then
@@ -319,22 +335,40 @@ EOF_CONFIGURATION
 }
 
 find_or_download_template() {
-  local existing available
+  local available="${1:-}" existing existing_name newest_name
+  [[ -n "$available" ]] || fatal "No Debian 13 AMD64 standard template was selected from the Proxmox appliance catalog"
+
   existing=$(pveam list "$TEMPLATE_STORAGE" 2>/dev/null \
     | awk '$1 ~ /debian-13-standard_.*_amd64\.tar\.zst$/ {print $1}' \
     | sort -V | tail -n1)
+
   if [[ -n "$existing" ]]; then
-    printf '%s' "$existing"
-    return 0
+    existing_name="${existing##*/}"
+    newest_name=$(printf '%s\n%s\n' "$existing_name" "$available" | sort -V | tail -n1)
+
+    if [[ "$existing_name" == "$available" ]]; then
+      info "Using cached Debian template ${existing_name}" >&2
+      printf '%s' "$existing"
+      return 0
+    fi
+
+    # A locally cached template can occasionally be newer than the refreshed
+    # catalog (for example after a catalog rollback). Never replace it with an
+    # older catalog entry.
+    if [[ "$newest_name" == "$existing_name" ]]; then
+      warn "Cached Debian template ${existing_name} is newer than catalog entry ${available}; using cached template"
+      printf '%s' "$existing"
+      return 0
+    fi
+
+    info "Newer Debian template available (${existing_name} -> ${available})" >&2
+  else
+    info "No cached Debian 13 AMD64 template found on ${TEMPLATE_STORAGE}" >&2
   fi
-  info "Refreshing the official Proxmox appliance catalog"
-  pveam update
-  available=$(pveam available --section system 2>/dev/null \
-    | awk '$2 ~ /^debian-13-standard_.*_amd64\.tar\.zst$/ {print $2}' \
-    | sort -V | tail -n1)
-  [[ -n "$available" ]] || fatal "No Debian 13 AMD64 standard template is available from the Proxmox appliance catalog"
-  info "Downloading ${available}"
-  pveam download "$TEMPLATE_STORAGE" "$available"
+
+  info "Downloading ${available} to ${TEMPLATE_STORAGE}" >&2
+  pveam download "$TEMPLATE_STORAGE" "$available" >&2 \
+    || fatal "Failed to download Debian template ${available} to ${TEMPLATE_STORAGE}"
   printf '%s:vztmpl/%s' "$TEMPLATE_STORAGE" "$available"
 }
 
@@ -399,10 +433,6 @@ prompt_network
 [[ "$method" == "advanced" ]] && prompt_advanced_resources
 confirm_configuration || exit 0
 
-# Template cache placement is an implementation detail, not a normal user
-# choice. Resolve it only after the user has approved the actual CT settings.
-TEMPLATE_STORAGE="$(resolve_template_storage)"
-
 clear || true
 printf '  ⚙️  Using %s Install on node %s\n' "${method^}" "$(hostname)"
 printf '  💡  PVE Version: %s (Kernel: %s)\n' "$PVE_VERSION" "$(uname -r)"
@@ -417,7 +447,23 @@ printf '  📡  IPv4: %s\n' "$NET"
 printf '  🌐  Gateway: %s\n' "${GATE:-DHCP/none}"
 printf '  🏷️  VLAN: %s\n' "${VLAN:-none}"
 
-TEMPLATE="$(find_or_download_template)"
+# Always refresh the official appliance catalog before choosing a template so
+# a new CT does not silently start from an older cached Debian image.
+info "Refreshing the official Proxmox appliance catalog"
+pveam update || fatal "Failed to refresh the official Proxmox appliance catalog"
+LATEST_TEMPLATE=$(pveam available --section system 2>/dev/null \
+  | awk '$2 ~ /^debian-13-standard_.*_amd64\.tar\.zst$/ {print $2}' \
+  | sort -V | tail -n1)
+[[ -n "$LATEST_TEMPLATE" ]] \
+  || fatal "No Debian 13 AMD64 standard template is available from the Proxmox appliance catalog"
+
+# Template cache placement is an implementation detail, not a normal user
+# choice. Prefer a storage already holding the latest template, otherwise keep
+# existing Debian template caches consolidated before falling back to `local`.
+TEMPLATE_STORAGE="$(resolve_template_storage "$LATEST_TEMPLATE")"
+TEMPLATE="$(find_or_download_template "$LATEST_TEMPLATE")"
+ok "Debian template ready: ${TEMPLATE##*/}"
+
 net0="name=eth0,bridge=${BRG},ip=${NET},ip6=auto,type=veth"
 [[ -n "$GATE" ]] && net0+=",gw=${GATE}"
 [[ -n "$VLAN" ]] && net0+=",tag=${VLAN}"
