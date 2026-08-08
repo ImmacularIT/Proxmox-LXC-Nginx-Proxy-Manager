@@ -140,10 +140,7 @@ for script in build-openresty-native.sh install-release.sh; do
 done
 project_download /usr/local/sbin/npm-lxc-prepare scripts/npm-prepare.sh
 project_download /usr/local/sbin/npm-lxc-healthcheck scripts/npm-healthcheck.sh
-project_download /usr/local/sbin/npm-lxc-backup scripts/npm-backup.sh
-project_download /usr/local/sbin/npm-lxc-restore scripts/npm-restore.sh
-project_download /usr/local/sbin/npm-lxc-update scripts/npm-update.sh
-chmod 0755 /usr/local/sbin/npm-lxc-{prepare,healthcheck,backup,restore,update}
+chmod 0755 /usr/local/sbin/npm-lxc-{prepare,healthcheck}
 project_download /etc/systemd/system/nginx-proxy-manager-backend.service systemd/nginx-proxy-manager-backend.service
 project_download /etc/systemd/system/nginx-proxy-manager-nginx.service systemd/nginx-proxy-manager-nginx.service
 ok "Installed project-owned native service tooling"
