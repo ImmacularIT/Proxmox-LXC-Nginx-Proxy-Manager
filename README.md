@@ -5,15 +5,15 @@ An independent ImmacularIT project that converts the official, Docker-based
 application into a native Debian 13 Proxmox LXC installation.
 
 > **Development status:** active runtime validation is in progress on Proxmox
-> VE 9.2.9 with Debian 13.6 AMD64. Container creation, Node/Yarn, Certbot,
-> OpenResty compilation, frontend locale compilation and build, backend native
-> dependencies, SQLite initialization, official migrations, backend and
-> OpenResty systemd startup, ports 80/81/443/3000, and the complete native
-> health check have all been exercised successfully. The project remains a
-> development draft because clean-install confirmation of the latest branch,
-> reboot persistence, browser/application features, certificates,
-> backup/restore, update/rollback, and branding tests remain. Use only a
-> disposable test container until the runtime matrix is complete.
+> VE 9.2.9 with Debian 13.6 AMD64. Fresh native installation, first-run setup,
+> administrator management, TOTP, correct GUI version reporting, HTTP proxying,
+> WebSockets, Let's Encrypt HTTP challenges for multiple real subdomains, Force
+> SSL, full-container reboot, persistent application data, and the complete
+> native health check have all been exercised successfully. The project remains
+> a development draft while the remaining proxy variants, certificate renewal
+> and import paths, backup/restore, update/rollback, branding, and other matrix
+> items are completed. Use only a disposable test container until the runtime
+> matrix is complete.
 
 ## Pinned upstream
 
@@ -28,6 +28,7 @@ application into a native Debian 13 Proxmox LXC installation.
 | Certbot | `5.6.0` |
 | Lua / LuaRocks | `5.1.5` / `3.13.0` |
 | Base operating system | Debian 13 |
+| Target architecture | AMD64 |
 
 The installer fetches exact Git commits and validates release markers and
 selected Git blob IDs before building. It does not install from `develop`,
@@ -85,11 +86,10 @@ Current default resources are deliberately sized for the source build:
 - 2 CPU cores;
 - 4096 MB RAM;
 - 16 GB disk;
-- unprivileged Debian 13 LXC.
+- unprivileged Debian 13 AMD64 LXC.
 
-ARM64 is not currently advertised by the launcher. Although the official image
-build supports AMD64 and ARM64, the native adaptation must pass its own complete
-ARM64 build and runtime test before that switch is enabled.
+This project targets AMD64 only. ARM64 support is not part of the project scope
+or runtime test plan.
 
 ## Ports
 
@@ -158,13 +158,14 @@ Repository checks cover Bash and JSON syntax, systemd units, required metadata,
 version pins, Docker-derived source markers, branding PNG signatures, forbidden
 nested-runtime installation commands, moving upstream branch URLs, explicit
 no-telemetry launcher/installer invariants, automatic template-storage handling,
-no unnecessary LXC nesting/keyctl features, and obvious private-key or token
-patterns.
+no unnecessary LXC nesting/keyctl features, AMD64-only target enforcement, and
+obvious private-key or token patterns.
 
-Real Proxmox validation has now reached a passing native service stack: backend
-and OpenResty are active, ports 3000/80/81/443 listen, port 81 returns HTTP 200,
-and `npm-lxc-healthcheck` passes without Docker installed. These checks do not
-replace the remaining runtime tests. See [docs/RUNTIME-TEST-PLAN.md](docs/RUNTIME-TEST-PLAN.md).
+Real Proxmox validation has progressed beyond basic startup: the native stack,
+first-run workflow, administrators/TOTP, HTTP and WebSocket proxying, production
+Let's Encrypt issuance, Force SSL, reboot persistence, correct GUI version, and
+health checks have all passed on Debian 13.6 AMD64. These checks do not replace
+the remaining runtime tests. See [docs/RUNTIME-TEST-PLAN.md](docs/RUNTIME-TEST-PLAN.md).
 
 ## Project identity
 
