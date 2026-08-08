@@ -7,12 +7,12 @@ application into a native Debian 13 Proxmox LXC installation.
 > **Development status:** the supported Nginx Proxy Manager v2.15.1 runtime
 > matrix has been exercised successfully on Proxmox VE 9.2.9 with Debian 13.6
 > AMD64. Container creation, native build/services, Proxmox branding, the
-> application feature matrix, and the final fresh-install health smoke test all
-> pass. The pull request remains a development draft pending one narrow final
-> start/reboot check after enabling LXC nesting by default to suppress the
-> Proxmox Systemd 257 warning. Backup/restore and adaptation-level in-place
-> update tooling are future ImmacularIT project options and are not part of the
-> current supported feature set.
+> application feature matrix, the final fresh-install health smoke test, and the
+> final nesting-enabled start/reboot smoke check all pass. The pull request
+> remains a development draft pending explicit maintainer approval to promote.
+> Backup/restore and adaptation-level in-place update tooling are future
+> ImmacularIT project options and are not part of the current supported feature
+> set.
 
 ## Pinned upstream
 
@@ -186,10 +186,10 @@ compatibility, lifecycle-scope invariants, and obvious private-key or token
 patterns.
 
 Real Proxmox validation on PVE 9.2.9 / Debian 13.6 AMD64 has completed the
-supported v2.15.1 application/runtime matrices and final fresh-install health
-smoke test. The subsequent change to enable `nesting=1` requires one narrow
-final start/reboot confirmation: the CT must remain healthy and the Proxmox
-Systemd 257 nesting warning must no longer appear. See
+supported v2.15.1 application/runtime matrices, the final fresh-install health
+smoke test, and the nesting-enabled start/reboot confirmation. The production
+CT remained unprivileged with keyctl disabled, the Systemd 257 nesting warning
+no longer appeared, and `npm-lxc-healthcheck` passed after reboot. See
 [docs/RUNTIME-TEST-PLAN.md](docs/RUNTIME-TEST-PLAN.md) for the recorded evidence.
 
 ## Project identity
