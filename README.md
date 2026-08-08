@@ -1,4 +1,4 @@
-# Proxmox Nginx Proxy Manager LXC
+# Proxmox LXC Nginx Proxy Manager
 
 An independent ImmacularIT project that converts the official, Docker-based
 [Nginx Proxy Manager](https://github.com/NginxProxyManager/nginx-proxy-manager)
