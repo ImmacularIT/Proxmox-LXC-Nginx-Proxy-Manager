@@ -21,6 +21,13 @@ TimeoutStartSec=180s
 TimeoutStopSec=30s
 KillSignal=SIGTERM
 UMask=0027
+# Upstream NPM's certificate workflow invokes `nginx -t` from the backend
+# process before launching Certbot. OpenResty validates low-port listeners while
+# testing the generated ACME config, so the unprivileged backend needs only the
+# bind-service capability for that child process. Keep the capability set
+# otherwise empty and retain NoNewPrivileges/systemd filesystem hardening.
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
 NoNewPrivileges=true
 PrivateDevices=true
 PrivateTmp=true
