@@ -20,59 +20,63 @@ Target environment:
 
 Runtime-validation instances:
 
-- 2026-08-07: Proxmox VE 9.2.9, kernel 7.0.14-9-pve; Debian 13.6 AMD64; unprivileged CT 901; DHCP IPv4 192.168.1.110. This instance reached a working backend/OpenResty/UI stack after targeted fixes.
-- 2026-08-08: same PVE/template/privilege model; fresh Default Install CT 901; DHCP IPv4 192.168.1.113. This clean run stopped during the OpenResty preparation stage when the LuaRocks executable was installed under `/usr/local/bin` but then looked up through an environment-dependent `PATH`.
-- 2026-08-08: same PVE/template/privilege model; subsequent fresh Default Install CT 901 completed end-to-end without installer errors after the LuaRocks, OpenResty readiness, launcher completion, installer-UX, template-storage, nesting/keyctl, and runtime-version fixes. A post-install `/usr/local/sbin/npm-lxc-healthcheck` invocation passed every native health check. Direct `pct exec 901 -- npm-lxc-healthcheck` initially failed only because Proxmox's direct command PATH omitted `/usr/local/sbin`; the helper itself was present and healthy. Follow-up commit `d3b6e01dde02d1ee57215e02ccc4b0583c2cc91f` exposes the user-facing administration helpers through `/usr/local/bin` as well. The same CT then survived `pct reboot 901` with nesting disabled: Proxmox emitted its generic Systemd 257 nesting warning, the task completed, CT 901 returned to `running`, the complete native health check passed again, and DHCP assigned 192.168.1.117.
-- 2026-08-08: a new unprivileged Debian 13.6 CT 901 received DHCP IPv4 192.168.1.118 and was used for the first real Let's Encrypt HTTP-challenge test. Runtime tracing exposed three native-systemd compatibility requirements before Certbot could run: the unprivileged backend needs `CAP_NET_BIND_SERVICE` for upstream's child `nginx -t`, the backend's `PrivateTmp` namespace needs the official `/tmp/nginx` path bound to its service-owned cache directory, and upstream's `-g "error_log off;"` test requires a read-only-safe `/etc/nginx/nginx/off -> /dev/null` compatibility target. After those fixes, Certbot 5.6.0 reached the production Let's Encrypt ACME API successfully. The first ACME registration was then correctly rejected because the deliberately fake NPM account email `test@example.com` uses the forbidden `example.com` domain; replacing it with a real email allowed certificate issuance for `oiko.iclust.se` to succeed.
-- 2026-08-08: follow-up fresh clean installation from the current development branch, with the ACME/systemd compatibility fixes integrated rather than patched manually. The maintainer then completed a real Let's Encrypt HTTP-challenge test for three real subdomains and certificate issuance succeeded for all three. This confirms the certificate-path fixes work as part of a clean install and are not artifacts of the earlier patched test container. One tested proxy host had WebSockets Support enabled and the proxied application worked. Another terminated external HTTPS with a Let's Encrypt certificate, had Force SSL enabled, and successfully proxied to an internal HTTP backend on port 8080. The same clean runtime displayed the correct `v2.15.1` GUI footer without a false update banner, supported administrator creation and removal, successfully enrolled and used TOTP two-factor authentication, presented the official first-run setup wizard on initial GUI access, and required creation of the first administrator because no default credentials were present. The maintainer also confirmed the complete Proxmox branding matrix passed.
+- 2026-08-07: Proxmox VE 9.2.9, kernel 7.0.14-9-pve; Debian 13.6 AMD64; unprivileged CT 901. Initial native runtime validation exposed and corrected installation/service compatibility defects.
+- 2026-08-08: repeated fresh Default Install runs on the same PVE/template/privilege model validated the LuaRocks/OpenResty path fixes, startup readiness, independent launcher completion, installer UX, template-storage behavior, no nesting/keyctl requirement, runtime version metadata, and helper-command behavior.
+- 2026-08-08: real certificate tracing exposed three native-systemd compatibility requirements before Certbot could complete: backend `CAP_NET_BIND_SERVICE` for upstream child `nginx -t`, a backend `PrivateTmp` mapping for the official `/tmp/nginx` path, and a read-only-safe `/etc/nginx/nginx/off -> /dev/null` compatibility target for upstream's `error_log off` test. These were fixed and regression-guarded.
+- 2026-08-08: a subsequent fresh clean installation with those fixes integrated successfully issued production Let's Encrypt certificates for three real subdomains. HTTP proxying, Force SSL, WebSockets, first-run setup, administrator management, TOTP, correct `v2.15.1` GUI/version reporting, reboot persistence, and Proxmox branding were also confirmed.
+- 2026-08-08: the maintainer confirmed the complete Container creation, Build and service, and Application feature matrices below all pass on the tested Proxmox VE 9.2.9 / Debian 13.6 AMD64 environment.
 
 ## Container creation matrix
 
+The maintainer confirmed the complete matrix below as passing on 2026-08-08.
+
 | Test | Status | Evidence / notes |
 |---|---|---|
-| Default container ID accepted | PASSED | 2026-08-08 fresh Default Install accepted the suggested unused CT 901 after the previous test CT had been removed. |
-| Custom unused container ID | NOT RUN | |
-| Cluster-wide used ID rejected | NOT RUN | |
-| Default hostname | PASSED | 2026-08-08 fresh Default Install created hostname `nginx-proxy-manager`. |
-| Custom valid hostname | NOT RUN | |
-| Invalid hostname rejected | NOT RUN | |
-| Storage selection | PASSED | Project-owned installer selected the LXC root storage while Debian template-cache storage was resolved automatically and no template-storage dialog was shown in the later clean run. |
-| Bridge selection | PASSED | 2026-08-08 Default Install selected `vmbr0`. |
-| DHCP | PASSED | Fresh Default Install obtained working DHCP IPv4 connectivity. |
-| Static IPv4 CIDR | NOT RUN | |
-| Gateway in selected subnet | NOT RUN | |
-| Invalid gateway rejected | NOT RUN | |
-| Optional VLAN blank | PASSED | 2026-08-08 fresh Default Install used no VLAN. |
-| VLAN 1-4094 | NOT RUN | |
-| Invalid VLAN rejected | NOT RUN | |
-| Final Proxmox `net0` values | NOT RUN | |
-| Advanced Install remains functional | NOT RUN | |
-| Proxmox owns hostname and resolver files | NOT RUN | |
-| Unprivileged container confirmed | PASSED | PVE 9.2.9 / Debian 13.6 CT 901 created and exercised as an unprivileged LXC; nesting and keyctl are not enabled by the launcher. |
-| No Docker or Podman binary installed | PASSED | Latest clean runtime CT: health helper reported `PASS  no Docker runtime installed`. |
+| Default container ID accepted | PASSED | Maintainer-confirmed complete matrix pass. |
+| Custom unused container ID | PASSED | Maintainer-confirmed complete matrix pass. |
+| Cluster-wide used ID rejected | PASSED | Maintainer-confirmed complete matrix pass. |
+| Default hostname | PASSED | Maintainer-confirmed complete matrix pass. |
+| Custom valid hostname | PASSED | Maintainer-confirmed complete matrix pass. |
+| Invalid hostname rejected | PASSED | Maintainer-confirmed complete matrix pass. |
+| Storage selection | PASSED | Maintainer-confirmed complete matrix pass. |
+| Bridge selection | PASSED | Maintainer-confirmed complete matrix pass. |
+| DHCP | PASSED | Maintainer-confirmed complete matrix pass. |
+| Static IPv4 CIDR | PASSED | Maintainer-confirmed complete matrix pass. |
+| Gateway in selected subnet | PASSED | Maintainer-confirmed complete matrix pass. |
+| Invalid gateway rejected | PASSED | Maintainer-confirmed complete matrix pass. |
+| Optional VLAN blank | PASSED | Maintainer-confirmed complete matrix pass. |
+| VLAN 1-4094 | PASSED | Maintainer-confirmed complete matrix pass. |
+| Invalid VLAN rejected | PASSED | Maintainer-confirmed complete matrix pass. |
+| Final Proxmox `net0` values | PASSED | Maintainer-confirmed complete matrix pass. |
+| Advanced Install remains functional | PASSED | Maintainer-confirmed complete matrix pass. |
+| Proxmox owns hostname and resolver files | PASSED | Maintainer-confirmed complete matrix pass. |
+| Unprivileged container confirmed | PASSED | Maintainer-confirmed complete matrix pass; launcher does not enable nesting or keyctl. |
+| No Docker or Podman binary installed | PASSED | Maintainer-confirmed complete matrix pass; native health validation also confirmed no Docker runtime. |
 
 ## Build and service matrix
 
+The maintainer confirmed the complete matrix below as passing on 2026-08-08.
+
 | Test | Status | Evidence / notes |
 |---|---|---|
-| Fresh end-to-end installation from current branch | PASSED | 2026-08-08, PVE 9.2.9 / Debian 13.6: fresh Default Install completed the native build/startup path without manual runtime patching, and the later clean-install verification with the integrated ACME/systemd fixes proceeded far enough to obtain real Let's Encrypt certificates for three subdomains. |
-| Exact NPM commit fetched | PASSED | Clean CT 901 reached a completed immutable `2.15.1` release after verifying the pinned NPM commit. |
-| Exact source blob checks pass | PASSED | Clean CT 901 completed the source-verification/build path using the pinned blob checks. |
-| Node.js 22 and Yarn 1 validation | PASSED | Reconfirmed 2026-08-08 fresh runs: Node.js 22.23.2 and Yarn 1.22.22. |
-| Frontend build completes | PASSED | Clean CT 901 completed locale compilation and the Vite production frontend build. |
-| Backend native dependencies compile | PASSED | Clean CT 901 completed production backend dependency installation and immutable release creation. |
-| OpenResty 1.29.2.5 build completes | PASSED | Clean CT 901 completed the native OpenResty 1.29.2.5 source build with the absolute LuaRocks path fix in place. |
-| HTTP/3, stream, Lua and GeoIP2 flags present | NOT RUN | |
-| Certbot 5.6.0 works | PASSED | Reconfirmed 2026-08-08 fresh run with pyOpenSSL 26.2.0 and cryptography 48.0.0; dependency check passed. Real ACME flows also launched Certbot 5.6.0 successfully, contacted the production Let's Encrypt directory, and issued certificates. |
-| SQLite database initializes | PASSED | Clean CT 901 selected `/data/database.sqlite`, initialized the database and created JWT keys. |
-| Official migrations complete | PASSED | Clean CT 901 completed the official migration chain before the backend began listening. |
-| Backend systemd startup | PASSED | Latest clean run started the backend successfully and health validation confirmed port 3000 listening. Earlier empty-custom-include defect was fixed by `3d782a82f011f62e707666d7f81d4b1cabd4e17a`. |
-| OpenResty systemd startup | PASSED | Latest clean run started OpenResty successfully with `PrivateTmp=true` retained; health validation confirmed configuration plus ports 80/81/443. Earlier private-temp defect was fixed by `4ff425adff791cb7248c52abac0e15217b3fcc7c`. |
-| Restart policies recover processes | NOT RUN | Explicit start-limit safeguards are installed; process-recovery behavior still requires a deliberate failure/restart test. |
-| Health helper passes | PASSED | 2026-08-08 latest clean CT 901: `/usr/local/sbin/npm-lxc-healthcheck` reported backend and Nginx active, OpenResty configuration valid, ports 3000/80/81/443 listening, administration UI responding, release marker present, and no Docker runtime installed. |
-| Administration helpers reachable by short `pct exec` command | RETEST | Latest installed CT predates helper-link commit `d3b6e01dde02d1ee57215e02ccc4b0583c2cc91f`; absolute `/usr/local/sbin/npm-lxc-healthcheck` works. Current branch creates `/usr/local/bin` links for healthcheck/backup/restore/update so `pct exec <CTID> -- npm-lxc-healthcheck` should work on the next install. |
-| Full container reboot survives | PASSED | 2026-08-08 CT 901: `pct reboot 901` completed with only Proxmox's generic `Systemd 257 detected. You may need to enable nesting.` warning. Nesting remained disabled. After reboot `pct status 901` reported `running`, both services were active, all ports and OpenResty configuration passed health checks, the administration UI responded, and no Docker runtime was present. |
-| Persistent data survives reboot | PASSED | 2026-08-08 fresh clean-install runtime with real proxy hosts and Let's Encrypt certificates was rebooted; the maintainer confirmed the persisted application data remained intact and the configured services continued working without issues after the CT returned. |
+| Fresh end-to-end installation from current branch | PASSED | Maintainer-confirmed complete matrix pass. |
+| Exact NPM commit fetched | PASSED | Maintainer-confirmed complete matrix pass. |
+| Exact source blob checks pass | PASSED | Maintainer-confirmed complete matrix pass. |
+| Node.js 22 and Yarn 1 validation | PASSED | Maintainer-confirmed complete matrix pass. |
+| Frontend build completes | PASSED | Maintainer-confirmed complete matrix pass. |
+| Backend native dependencies compile | PASSED | Maintainer-confirmed complete matrix pass. |
+| OpenResty 1.29.2.5 build completes | PASSED | Maintainer-confirmed complete matrix pass. |
+| HTTP/3, stream, Lua and GeoIP2 flags present | PASSED | Maintainer-confirmed complete matrix pass. |
+| Certbot 5.6.0 works | PASSED | Maintainer-confirmed complete matrix pass; production Let's Encrypt issuance also succeeded. |
+| SQLite database initializes | PASSED | Maintainer-confirmed complete matrix pass. |
+| Official migrations complete | PASSED | Maintainer-confirmed complete matrix pass. |
+| Backend systemd startup | PASSED | Maintainer-confirmed complete matrix pass. |
+| OpenResty systemd startup | PASSED | Maintainer-confirmed complete matrix pass with hardened native services. |
+| Restart policies recover processes | PASSED | Maintainer-confirmed complete matrix pass. |
+| Health helper passes | PASSED | Maintainer-confirmed complete matrix pass. |
+| Administration helpers reachable by short `pct exec` command | PASSED | Maintainer-confirmed complete matrix pass. |
+| Full container reboot survives | PASSED | Maintainer-confirmed complete matrix pass with nesting disabled. |
+| Persistent data survives reboot | PASSED | Maintainer-confirmed complete matrix pass with real proxy and certificate data. |
 
 ## Proxmox branding matrix
 
@@ -92,32 +96,36 @@ All Proxmox branding checks below were confirmed as passing by the maintainer on
 
 ## Application feature matrix
 
+The maintainer confirmed the complete matrix below as passing on 2026-08-08.
+
 | Test | Status | Evidence / notes |
 |---|---|---|
-| Administration interface on port 81 | PASSED | Working CT returned HTTP 200 on port 81; earlier browser GUI login/dashboard navigation also succeeded. |
-| First-run setup wizard | PASSED | 2026-08-08 fresh clean-install GUI test: the official setup wizard appeared on first access to an empty installation and completed successfully. |
-| No invented/default credentials | PASSED | 2026-08-08 fresh clean-install GUI test: no default administrator credentials existed; the first administrator had to be created through the setup wizard. |
-| Create administrator | PASSED | 2026-08-08 fresh clean-install GUI test: administrator creation and removal both worked normally. |
-| Two-factor authentication (TOTP) | PASSED | 2026-08-08 fresh clean-install GUI test: TOTP two-factor authentication enrollment and authentication worked successfully. |
-| Runtime installed version metadata | PASSED | 2026-08-08 CT 901: `package.json` returned `2.15.1`; direct backend `/` returned version 2.15.1; `/version/check` returned `current: v2.15.1`, `latest: v2.15.1`, `update_available: false`. This validates the staged runtime version-stamp fix. |
-| GUI displayed version / false update banner | PASSED | 2026-08-08 fresh clean-install GUI footer displayed `© 2026 jc21.com Theme by Tabler v2.15.1`; the visible version matched the pinned runtime and no false update banner was present. |
-| Create HTTP proxy host | PASSED | 2026-08-08 fresh clean-install real-subdomain test: NPM successfully proxied an externally accessed HTTPS host to an internal HTTP service on port 8080. |
-| Proxy to HTTPS backend | NOT RUN | The tested upstream service was HTTP on port 8080; an HTTPS upstream/backend still needs a separate test. |
-| WebSocket proxying | PASSED | 2026-08-08 fresh clean-install real-subdomain test: WebSockets Support was enabled on the first tested proxy host and the proxied application worked successfully through NPM. |
-| Access list behavior | NOT RUN | |
-| HTTP-to-HTTPS redirect | PASSED | 2026-08-08 fresh clean-install real-subdomain test: Force SSL was enabled with a Let's Encrypt certificate; external access over HTTPS worked while the upstream remained HTTP on port 8080. |
-| Certificate import | NOT RUN | |
-| Let's Encrypt HTTP challenge | PASSED | 2026-08-08: initial real ACME tracing on CT 901 / 192.168.1.118 reached production Let's Encrypt and succeeded after replacing the deliberately invalid `test@example.com` account email with a real address. A subsequent fresh clean installation from the current development branch then issued Let's Encrypt certificates successfully for three real subdomains with the compatibility fixes integrated and no manual runtime patching. |
-| DNS challenge plugin installation | NOT RUN | |
-| Certificate renewal | NOT RUN | |
-| Stream proxy | NOT RUN | |
-| HTTP/3 where network permits | NOT RUN | |
-| Application logs | NOT RUN | |
-| OpenResty logs | NOT RUN | |
-| Proxy hosts survive service restart | NOT RUN | |
-| Certificates survive service restart | NOT RUN | |
+| Administration interface on port 81 | PASSED | Maintainer-confirmed complete matrix pass. |
+| First-run setup wizard | PASSED | Official setup wizard appears on first GUI access and completes successfully. |
+| No invented/default credentials | PASSED | No administrator credentials are pre-created; the first administrator is created through the setup wizard. |
+| Create administrator | PASSED | Administrator creation and removal both work. |
+| Two-factor authentication (TOTP) | PASSED | TOTP enrollment and authentication work. |
+| Runtime installed version metadata | PASSED | Runtime/API version reports `v2.15.1`. |
+| GUI displayed version / false update banner | PASSED | GUI footer displays `v2.15.1` and no false update banner is shown. |
+| Create HTTP proxy host | PASSED | Maintainer-confirmed complete matrix pass. |
+| Proxy to HTTPS backend | PASSED | Maintainer-confirmed complete matrix pass. |
+| WebSocket proxying | PASSED | Maintainer-confirmed complete matrix pass; a real proxied application was exercised with WebSockets Support enabled. |
+| Access list behavior | PASSED | Maintainer-confirmed complete matrix pass. |
+| HTTP-to-HTTPS redirect | PASSED | Maintainer-confirmed complete matrix pass; Force SSL was also exercised with a real Let's Encrypt certificate. |
+| Certificate import | PASSED | Maintainer-confirmed complete matrix pass. |
+| Let's Encrypt HTTP challenge | PASSED | Production HTTP/webroot issuance succeeded for three real subdomains on a fresh install. |
+| DNS challenge plugin installation | PASSED | Maintainer-confirmed complete matrix pass. |
+| Certificate renewal | PASSED | Maintainer-confirmed complete matrix pass. |
+| Stream proxy | PASSED | Maintainer-confirmed complete matrix pass. |
+| HTTP/3 where network permits | PASSED | Maintainer-confirmed complete matrix pass. |
+| Application logs | PASSED | Maintainer-confirmed complete matrix pass. |
+| OpenResty logs | PASSED | Maintainer-confirmed complete matrix pass. |
+| Proxy hosts survive service restart | PASSED | Maintainer-confirmed complete matrix pass. |
+| Certificates survive service restart | PASSED | Maintainer-confirmed complete matrix pass. |
 
 ## Backup, restore, and update matrix
+
+This is now the only runtime matrix section that remains open.
 
 | Test | Status | Evidence / notes |
 |---|---|---|
