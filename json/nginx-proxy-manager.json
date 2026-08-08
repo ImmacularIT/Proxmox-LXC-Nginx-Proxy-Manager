@@ -6,7 +6,7 @@
   ],
   "date_created": "2026-08-06",
   "type": "ct",
-  "updateable": true,
+  "updateable": false,
   "privileged": false,
   "interface_port": 81,
   "documentation": "https://github.com/ImmacularIT/Proxmox-LXC-Nginx-Proxy-Manager",
@@ -30,7 +30,7 @@
   "notes": [
     {
       "type": "warning",
-      "text": "Development status: real Proxmox VE 9.x runtime validation is active and many core application paths now pass, but the complete test matrix is not yet finished. Use a disposable test container until the remaining gates are recorded."
+      "text": "Development status: the supported v2.15.1 Proxmox runtime matrix has been exercised successfully. Backup/restore and adaptation-level update tooling are future project options and are not part of the current supported feature set."
     },
     {
       "type": "info",
