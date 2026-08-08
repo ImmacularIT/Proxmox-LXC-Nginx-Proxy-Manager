@@ -34,7 +34,7 @@
     },
     {
       "type": "info",
-      "text": "The container remains unprivileged. The launcher enables nesting=1 to avoid the recurring Proxmox Systemd 257 nesting warning; keyctl remains disabled. Nginx Proxy Manager itself does not use a nested container runtime."
+      "text": "The container remains unprivileged. The launcher enables nesting=1 to avoid the recurring Proxmox Systemd 257 nesting warning; keyctl remains disabled. Nginx Proxy Manager itself does not use Docker, Podman, Kubernetes, or another nested container runtime."
     },
     {
       "type": "info",
