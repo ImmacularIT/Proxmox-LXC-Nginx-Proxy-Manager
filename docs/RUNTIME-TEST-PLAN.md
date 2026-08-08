@@ -25,6 +25,7 @@ Runtime-validation instances:
 - 2026-08-08: real certificate tracing exposed three native-systemd compatibility requirements before Certbot could complete: backend `CAP_NET_BIND_SERVICE` for upstream child `nginx -t`, a backend `PrivateTmp` mapping for the official `/tmp/nginx` path, and a read-only-safe `/etc/nginx/nginx/off -> /dev/null` compatibility target for upstream's `error_log off` test. These were fixed and regression-guarded.
 - 2026-08-08: a subsequent fresh clean installation with those fixes integrated successfully issued production Let's Encrypt certificates for three real subdomains. HTTP proxying, Force SSL, WebSockets, first-run setup, administrator management, TOTP, correct `v2.15.1` GUI/version reporting, reboot persistence, and Proxmox branding were also confirmed.
 - 2026-08-08: the maintainer confirmed the complete Container creation, Build and service, Proxmox branding, and Application feature matrices below all pass on the tested Proxmox VE 9.2.9 / Debian 13.6 AMD64 environment.
+- 2026-08-08: after those matrices passed, the host launcher was tightened to refresh the Proxmox appliance catalog on every approved installation and download/use the newest Debian 13 AMD64 template when the cached copy is older. This host-side change requires one final fresh-install smoke test on the exact release-candidate head; the already-passed application matrices do not need to be repeated unless that smoke test exposes a regression.
 
 ## Container creation matrix
 
@@ -123,9 +124,21 @@ The maintainer confirmed the complete matrix below as passing on 2026-08-08.
 | Proxy hosts survive service restart | PASSED | Maintainer-confirmed complete matrix pass. |
 | Certificates survive service restart | PASSED | Maintainer-confirmed complete matrix pass. |
 
+## Final release-candidate smoke test
+
+The application/runtime matrices above remain PASSED. The following narrow
+release-candidate checks cover the host-side template-selection change made
+after those tests.
+
+| Test | Status | Evidence / notes |
+|---|---|---|
+| Proxmox appliance catalog refreshes before template selection | RETEST | Current launcher now runs `pveam update` after configuration approval and before choosing the Debian template. Requires real-host confirmation. |
+| Older cached Debian 13 template downloads current catalog template | RETEST | Current launcher compares the newest cached Debian 13 AMD64 filename with the refreshed catalog version using version-aware ordering and downloads the catalog version when newer. Requires real-host confirmation. |
+| Missing Debian 13 template downloads automatically | RETEST | Existing automatic-download behavior is retained, with progress redirected away from the command-substitution result. Requires real-host confirmation. |
+| Fresh install and `npm-lxc-healthcheck` pass on exact final head | RETEST | This is the final promotion smoke test; the full application matrix does not need repetition unless this test exposes a regression. |
+
 ## Future lifecycle features
 
-The supported Nginx Proxy Manager v2.15.1 runtime matrix is complete above.
 Backup/restore and adaptation-level in-place update/rollback tooling are not
 upstream NPM application features and are not release gates for this native
 adaptation. They may be designed and validated as separate future ImmacularIT
