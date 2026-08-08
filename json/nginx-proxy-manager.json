@@ -29,8 +29,8 @@
   ],
   "notes": [
     {
-      "type": "warning",
-      "text": "Development status: the supported v2.15.1 Proxmox runtime matrix has been exercised successfully. One final start/reboot smoke check remains after enabling the Proxmox nesting feature by default. Backup/restore and adaptation-level update tooling are future project options and are not part of the current supported feature set."
+      "type": "info",
+      "text": "Release status: the supported v2.15.1 Proxmox runtime matrix and final promotion smoke checks have passed. The validated release is published on main. Backup/restore and adaptation-level update tooling are future project options and are not part of the current supported feature set."
     },
     {
       "type": "info",
