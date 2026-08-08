@@ -197,9 +197,7 @@ for marker in [
     assert marker in prepare, f"Missing persistent/runtime path marker: {marker}"
 assert '[[ -s "$conf" ]] || continue' in prepare, "Empty Nginx include files must be accepted"
 assert "IPv6 rewrite produced an empty file" not in prepare, "Empty custom includes must not be fatal"
-for admin_helper in ["healthcheck", "backup", "restore", "update"]:
-    assert f'/usr/local/sbin/npm-lxc-${{admin_helper}}' not in prepare  # guard malformed literal interpolation
-    assert f'npm-lxc-${admin_helper}' in prepare, f"Missing admin helper exposure for {admin_helper}"
+assert 'for admin_helper in healthcheck backup restore update; do' in prepare
 assert 'helper_source="/usr/local/sbin/npm-lxc-${admin_helper}"' in prepare
 assert 'helper_link="/usr/local/bin/npm-lxc-${admin_helper}"' in prepare
 assert 'ln -sfn "$helper_source" "$helper_link"' in prepare, (
