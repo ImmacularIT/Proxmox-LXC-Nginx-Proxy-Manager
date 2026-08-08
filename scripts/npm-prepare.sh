@@ -21,17 +21,15 @@ is_true() {
 }
 
 # Keep service-internal preparation under /usr/local/sbin, while exposing the
-# user-facing administration helpers through /usr/local/bin as well. Proxmox
+# user-facing health check through /usr/local/bin as well. Proxmox
 # `pct exec <ctid> -- <command>` may omit /usr/local/sbin from its command PATH.
-for admin_helper in healthcheck backup restore update; do
-  helper_source="/usr/local/sbin/npm-lxc-${admin_helper}"
-  helper_link="/usr/local/bin/npm-lxc-${admin_helper}"
-  [[ -x "$helper_source" ]] || {
-    echo "Missing administration helper: ${helper_source}" >&2
-    exit 1
-  }
-  ln -sfn "$helper_source" "$helper_link"
-done
+helper_source="/usr/local/sbin/npm-lxc-healthcheck"
+helper_link="/usr/local/bin/npm-lxc-healthcheck"
+[[ -x "$helper_source" ]] || {
+  echo "Missing administration helper: ${helper_source}" >&2
+  exit 1
+}
+ln -sfn "$helper_source" "$helper_link"
 
 install -d -o "$NPM_USER" -g "$NPM_GROUP" -m 0750 \
   /data \
@@ -57,8 +55,6 @@ install -d -o "$NPM_USER" -g "$NPM_GROUP" -m 0750 \
   /var/lib/logrotate \
   /var/cache/nginx/proxy_temp \
   /var/log/nginx
-
-install -d -o root -g root -m 0700 /var/backups/nginx-proxy-manager
 
 # Upstream internalNginx.test() invokes nginx with `-g "error_log off;"`.
 # Nginx treats `off` as a relative log filename rather than a disable keyword,
