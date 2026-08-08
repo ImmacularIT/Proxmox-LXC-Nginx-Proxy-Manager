@@ -39,6 +39,9 @@ jobs:
           grep -Fq 'systemctl is-active --quiet nginx-proxy-manager-nginx.service || return 1' scripts/npm-healthcheck.sh
           test "$(grep -c '^AmbientCapabilities=CAP_NET_BIND_SERVICE$' systemd/nginx-proxy-manager-backend.service)" -eq 1
           test "$(grep -c '^CapabilityBoundingSet=CAP_NET_BIND_SERVICE$' systemd/nginx-proxy-manager-backend.service)" -eq 1
+          test "$(grep -c '^CacheDirectory=nginx/tmp$' systemd/nginx-proxy-manager-backend.service)" -eq 1
+          test "$(grep -c '^CacheDirectoryMode=0750$' systemd/nginx-proxy-manager-backend.service)" -eq 1
+          test "$(grep -c '^BindPaths=/var/cache/nginx/tmp:/tmp/nginx$' systemd/nginx-proxy-manager-backend.service)" -eq 1
 
       - name: Validate systemd units
         run: |
