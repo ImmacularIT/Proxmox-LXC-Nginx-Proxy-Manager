@@ -4,6 +4,8 @@ An independent ImmacularIT project that converts the official, Docker-based
 [Nginx Proxy Manager](https://github.com/NginxProxyManager/nginx-proxy-manager)
 application into a native Debian 13 Proxmox LXC installation.
 
+<a href="https://www.buymeacoffee.com/eli66" target="_blank"><img src="http://public.jc21.com/github/by-me-a-coffee.png" alt="Buy Me A Coffee" style="height: 51px !important;width: 217px !important;" ></a>
+
 > **Release status:** the supported Nginx Proxy Manager v2.15.1 runtime matrix
 > has been exercised successfully on Proxmox VE 9.2.9 with Debian 13.6 AMD64.
 > Container creation, native build/services, Proxmox branding, the application
