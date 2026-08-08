@@ -42,6 +42,9 @@ jobs:
           test "$(grep -c '^CacheDirectory=nginx/tmp$' systemd/nginx-proxy-manager-backend.service)" -eq 1
           test "$(grep -c '^CacheDirectoryMode=0750$' systemd/nginx-proxy-manager-backend.service)" -eq 1
           test "$(grep -c '^BindPaths=/var/cache/nginx/tmp:/tmp/nginx$' systemd/nginx-proxy-manager-backend.service)" -eq 1
+          grep -Fq 'nginx_test_log="${nginx_test_log_dir}/off"' scripts/npm-prepare.sh
+          grep -Fq 'ln -s /dev/null "$nginx_test_log"' scripts/npm-prepare.sh
+          test "$(grep '^ReadWritePaths=' systemd/nginx-proxy-manager-backend.service | tr ' ' '\n' | grep -Fxc '/etc/nginx' || true)" -eq 0
 
       - name: Validate systemd units
         run: |
