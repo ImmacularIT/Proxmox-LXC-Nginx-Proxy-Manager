@@ -53,6 +53,10 @@ assert metadata["interface_port"] == 81
 assert metadata["install_methods"][0]["script"] == "ct/nginx-proxy-manager.sh"
 assert metadata["install_methods"][0]["resources"]["version"] == "13"
 assert "default_credentials" not in metadata
+assert any("nesting=1" in note.get("text", "") for note in metadata["notes"]), (
+    "Project metadata must disclose the nesting-enabled production default"
+)
+assert all("keyctl=1" not in note.get("text", "") for note in metadata["notes"])
 
 versions = (ROOT / "lib/versions.sh").read_text()
 expected_pins = {
@@ -149,10 +153,13 @@ assert "## Backup, restore, and update matrix" not in runtime_plan, (
     "Future lifecycle tooling must not block the supported v2.15.1 runtime matrix"
 )
 assert "## Final release-candidate smoke test" in runtime_plan
+assert "Systemd 257 nesting warning" in runtime_plan
 assert "## Future lifecycle features" in runtime_plan
 readme = (ROOT / "README.md").read_text()
 assert "complete ARM64 build and runtime test" not in readme, "README must not advertise a future ARM64 gate"
 assert "updateable: false" in readme
+assert "`nesting=1`" in readme
+assert "keyctl remains disabled" in readme
 
 # Neither host-side container creation nor container-side installation may
 # contact, advertise, or report diagnostics to an unrelated script service.
