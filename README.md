@@ -6,12 +6,13 @@ application into a native Debian 13 Proxmox LXC installation.
 
 > **Development status:** the supported Nginx Proxy Manager v2.15.1 runtime
 > matrix has been exercised successfully on Proxmox VE 9.2.9 with Debian 13.6
-> AMD64. Container creation, native build/services, Proxmox branding, and the
-> application feature matrix all pass. The pull request remains a development
-> draft pending final release review and a final current-head installation smoke
-> test after the Debian-template freshness logic was tightened. Backup/restore
-> and adaptation-level in-place update tooling are future ImmacularIT project
-> options and are not part of the current supported feature set.
+> AMD64. Container creation, native build/services, Proxmox branding, the
+> application feature matrix, and the final fresh-install health smoke test all
+> pass. The pull request remains a development draft pending one narrow final
+> start/reboot check after enabling LXC nesting by default to suppress the
+> Proxmox Systemd 257 warning. Backup/restore and adaptation-level in-place
+> update tooling are future ImmacularIT project options and are not part of the
+> current supported feature set.
 
 ## Pinned upstream
 
@@ -84,16 +85,23 @@ then Proxmox's conventional `local` storage, then the first active
 a normal installer dialog.
 
 Advanced Install additionally allows CPU, RAM, and disk customization. The
-launcher always creates an unprivileged LXC without enabling nesting or keyctl;
-runtime validation has shown that Nginx Proxy Manager does not require either
-feature.
+launcher always creates an **unprivileged** LXC and enables the Proxmox
+`nesting=1` feature by default. This is a host/container compatibility choice to
+avoid the recurring Proxmox warning for Systemd 257 guests; Nginx Proxy Manager
+does not require a nested container runtime. `keyctl` remains disabled and is
+not enabled by the launcher.
+
+Enabling the Proxmox nesting feature broadens the guest's visibility of some
+host kernel filesystems compared with a non-nesting LXC. The container remains
+unprivileged and the application still runs without Docker, Podman, Kubernetes,
+or another nested runtime.
 
 Current default resources are deliberately sized for the source build:
 
 - 2 CPU cores;
 - 4096 MB RAM;
 - 16 GB disk;
-- unprivileged Debian 13 AMD64 LXC.
+- unprivileged Debian 13 AMD64 LXC with `nesting=1`.
 
 This project targets AMD64 only. ARM64 support is not part of the project scope
 or runtime test plan.
@@ -170,14 +178,16 @@ Repository checks cover Bash and JSON syntax, systemd units, required metadata,
 version pins, Docker-derived source markers, branding PNG signatures, forbidden
 nested-runtime installation commands, moving upstream branch URLs, explicit
 no-telemetry launcher/installer invariants, latest Debian-template catalog
-selection and download invariants, no unnecessary LXC nesting/keyctl features,
-AMD64-only target enforcement, certificate-workflow compatibility,
-lifecycle-scope invariants, and obvious private-key or token patterns.
+selection and download invariants, the fixed unprivileged `nesting=1` default
+with `keyctl` disabled, AMD64-only target enforcement, certificate-workflow
+compatibility, lifecycle-scope invariants, and obvious private-key or token
+patterns.
 
 Real Proxmox validation on PVE 9.2.9 / Debian 13.6 AMD64 has completed the
-supported v2.15.1 application/runtime matrices. Because the host-side template
-freshness path was changed afterward, one final fresh installation from the
-current branch head is required before promotion. See
+supported v2.15.1 application/runtime matrices and final fresh-install health
+smoke test. The subsequent change to enable `nesting=1` requires one narrow
+final start/reboot confirmation: the CT must remain healthy and the Proxmox
+Systemd 257 nesting warning must no longer appear. See
 [docs/RUNTIME-TEST-PLAN.md](docs/RUNTIME-TEST-PLAN.md) for the recorded evidence.
 
 ## Project identity
