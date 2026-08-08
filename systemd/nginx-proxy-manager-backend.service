@@ -31,6 +31,13 @@ CapabilityBoundingSet=CAP_NET_BIND_SERVICE
 NoNewPrivileges=true
 PrivateDevices=true
 PrivateTmp=true
+# The backend invokes nginx -t/-s during certificate workflows. Because
+# PrivateTmp gives the backend its own /tmp namespace, bind the same
+# service-owned backing directory used by the OpenResty unit onto the official
+# /tmp/nginx path so ACME validation can create /tmp/nginx/body.
+CacheDirectory=nginx/tmp
+CacheDirectoryMode=0750
+BindPaths=/var/cache/nginx/tmp:/tmp/nginx
 RuntimeDirectory=nginx
 RuntimeDirectoryMode=0750
 RuntimeDirectoryPreserve=yes
