@@ -16,9 +16,6 @@ required_files = [
     "scripts/install-release.sh",
     "scripts/npm-prepare.sh",
     "scripts/npm-healthcheck.sh",
-    "scripts/npm-backup.sh",
-    "scripts/npm-restore.sh",
-    "scripts/npm-update.sh",
     "systemd/nginx-proxy-manager-backend.service",
     "systemd/nginx-proxy-manager-nginx.service",
     "docs/PROJECT-HANDOFF.md",
@@ -28,6 +25,13 @@ required_files = [
 ]
 for relative in required_files:
     assert (ROOT / relative).is_file(), f"Missing required file: {relative}"
+
+for relative in [
+    "scripts/npm-backup.sh",
+    "scripts/npm-restore.sh",
+    "scripts/npm-update.sh",
+]:
+    assert not (ROOT / relative).exists(), f"Future lifecycle helper must not ship in v2.15.1: {relative}"
 
 workflow = (ROOT / ".github/workflows/syntax.yml").read_text()
 assert "actions/checkout@11d5960a326750d5838078e36cf38b85af677262" in workflow
@@ -41,6 +45,7 @@ for key in {
     assert key in metadata, f"Missing metadata field: {key}"
 assert metadata["slug"] == "nginx-proxy-manager"
 assert metadata["type"] == "ct"
+assert metadata["updateable"] is False, "In-place adaptation updates are outside the v2.15.1 supported scope"
 assert metadata["privileged"] is False
 assert metadata["interface_port"] == 81
 assert metadata["install_methods"][0]["script"] == "ct/nginx-proxy-manager.sh"
@@ -123,11 +128,18 @@ assert "msg_info" not in installer
 assert "msg_ok" not in installer
 assert "msg_error" not in installer
 assert "%s: " in installer, "Status labels must be separated from live command output with a colon"
+for unsupported in ["npm-lxc-backup", "npm-lxc-restore", "npm-lxc-update"]:
+    assert unsupported not in installer, f"Unsupported lifecycle command shipped by installer: {unsupported}"
 
 runtime_plan = (ROOT / "docs/RUNTIME-TEST-PLAN.md").read_text()
 assert "## ARM64 gate" not in runtime_plan, "ARM64 is outside this project's runtime test scope"
+assert "## Backup, restore, and update matrix" not in runtime_plan, (
+    "Future lifecycle tooling must not block the supported v2.15.1 runtime matrix"
+)
+assert "## Future lifecycle features" in runtime_plan
 readme = (ROOT / "README.md").read_text()
 assert "complete ARM64 build and runtime test" not in readme, "README must not advertise a future ARM64 gate"
+assert "updateable: false" in readme
 
 # Neither host-side container creation nor container-side installation may
 # contact, advertise, or report diagnostics to an unrelated script service.
@@ -200,18 +212,19 @@ for marker in [
     "/data/nginx/dead_host",
     "/data/letsencrypt-acme-challenge",
     "/etc/letsencrypt",
-    "/var/backups/nginx-proxy-manager",
     "/etc/nginx/conf.d/include/ip_ranges.conf",
 ]:
     assert marker in prepare, f"Missing persistent/runtime path marker: {marker}"
+assert "/var/backups/nginx-proxy-manager" not in prepare
 assert '[[ -s "$conf" ]] || continue' in prepare, "Empty Nginx include files must be accepted"
 assert "IPv6 rewrite produced an empty file" not in prepare, "Empty custom includes must not be fatal"
-assert 'for admin_helper in healthcheck backup restore update; do' in prepare
-assert 'helper_source="/usr/local/sbin/npm-lxc-${admin_helper}"' in prepare
-assert 'helper_link="/usr/local/bin/npm-lxc-${admin_helper}"' in prepare
+assert 'helper_source="/usr/local/sbin/npm-lxc-healthcheck"' in prepare
+assert 'helper_link="/usr/local/bin/npm-lxc-healthcheck"' in prepare
 assert 'ln -sfn "$helper_source" "$helper_link"' in prepare, (
-    "User-facing administration helpers must be reachable through /usr/local/bin for pct exec"
+    "User-facing health helper must be reachable through /usr/local/bin for pct exec"
 )
+for unsupported in ["npm-lxc-backup", "npm-lxc-restore", "npm-lxc-update"]:
+    assert unsupported not in prepare, f"Unsupported lifecycle helper wired by prepare: {unsupported}"
 assert '/etc/nginx/nginx' in prepare
 assert 'ln -s /dev/null "$nginx_test_log"' in prepare, (
     "Upstream nginx test log compatibility target must remain a /dev/null symlink"
@@ -235,6 +248,9 @@ for unit in (ROOT / "systemd").glob("*.service"):
     assert "ExecStartPre=+/usr/local/sbin/npm-lxc-prepare" in text
     assert "StartLimitIntervalSec=60" in text
     assert "StartLimitBurst=5" in text
+    assert "/var/backups/nginx-proxy-manager" not in text, (
+        "Services must not retain write access for unsupported backup tooling"
+    )
 
 backend_unit = (ROOT / "systemd/nginx-proxy-manager-backend.service").read_text()
 assert backend_unit.count("AmbientCapabilities=CAP_NET_BIND_SERVICE") == 1
