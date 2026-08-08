@@ -60,6 +60,23 @@ install -d -o "$NPM_USER" -g "$NPM_GROUP" -m 0750 \
 
 install -d -o root -g root -m 0700 /var/backups/nginx-proxy-manager
 
+# Upstream internalNginx.test() invokes nginx with `-g "error_log off;"`.
+# Nginx treats `off` as a relative log filename rather than a disable keyword,
+# resolving it to /etc/nginx/nginx/off with this OpenResty build. The backend
+# service intentionally keeps /etc/nginx read-only, so pre-create exactly that
+# path as a root-owned /dev/null symlink instead of weakening ProtectSystem.
+nginx_test_log_dir="/etc/nginx/nginx"
+nginx_test_log="${nginx_test_log_dir}/off"
+if [[ -e "$nginx_test_log" || -L "$nginx_test_log" ]]; then
+  [[ -L "$nginx_test_log" && "$(readlink "$nginx_test_log")" == "/dev/null" ]] || {
+    echo "Unexpected upstream nginx test log target: ${nginx_test_log}" >&2
+    exit 1
+  }
+else
+  install -d -o root -g root -m 0755 "$nginx_test_log_dir"
+  ln -s /dev/null "$nginx_test_log"
+fi
+
 # Upstream writes generated include files here. Keep shipped templates root-owned
 # and limit the writable include directory to the application group.
 install -d -o root -g "$NPM_GROUP" -m 0770 /etc/nginx/conf.d/include
