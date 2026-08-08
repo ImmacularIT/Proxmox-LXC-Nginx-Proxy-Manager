@@ -90,7 +90,7 @@ Advanced Install additionally allows CPU, RAM, and disk customization. The
 launcher always creates an **unprivileged** LXC and enables the Proxmox
 `nesting=1` feature by default. This is a host/container compatibility choice to
 avoid the recurring Proxmox warning for Systemd 257 guests; Nginx Proxy Manager
-does not require a nested container runtime. `keyctl` remains disabled and is
+does not require a nested container runtime. keyctl remains disabled and is
 not enabled by the launcher.
 
 Enabling the Proxmox nesting feature broadens the guest's visibility of some
