@@ -1,18 +1,18 @@
 # Project technical handoff
 
 This document records the current architecture, implementation boundaries,
-maintenance workflow, runtime evidence, and remaining release gates for
+maintenance workflow, and runtime evidence for
 `ImmacularIT/Proxmox-LXC-Nginx-Proxy-Manager`.
 
 **Status snapshot:** 2026-08-08  
-**Project state:** development draft; real Proxmox runtime validation active  
+**Project state:** development draft; supported v2.15.1 runtime matrix complete  
 **Target platform:** Proxmox VE 9.x, unprivileged Debian 13 AMD64 LXC  
 **Pinned upstream release:** `v2.15.1`  
 **Pinned upstream commit:** `76f09db610cfcaecf6d608a8947d6f75aa028870`  
 **Pinned official base-image source:** `fe5ba055ed29033a619e9103bef5d8218fe1fab0`
 
-Do not merge the development branch into `main` until the required runtime
-matrix is complete and explicitly reviewed.
+Keep the development pull request Draft until final release review is complete
+and the maintainer explicitly chooses to promote it.
 
 ## Executive summary
 
@@ -85,15 +85,11 @@ scripts/install-release.sh
     runtime version stamping, and versioned release creation.
 
 scripts/npm-prepare.sh
-    Runtime path, ownership, resolver, helper-link, and compatibility setup.
+    Runtime path, ownership, resolver, health-helper link, and compatibility
+    setup.
 
 scripts/npm-healthcheck.sh
     Native service, port, Nginx, UI, release, and no-Docker checks.
-
-scripts/npm-backup.sh
-scripts/npm-restore.sh
-scripts/npm-update.sh
-    Protected lifecycle helpers.
 
 systemd/*.service
     Hardened backend and OpenResty service units.
@@ -104,19 +100,16 @@ docs/PROJECT-HANDOFF.md
     Branding, runtime evidence, and engineering documentation.
 ```
 
+Backup/restore and adaptation-level update helpers are intentionally not part of
+the current release surface.
+
 ## Independent Proxmox launcher
 
 `ct/nginx-proxy-manager.sh` runs directly on the Proxmox VE host and is owned by
 this project. It does not source or execute an unrelated installer framework.
 
-It requires normal Proxmox host tools including:
-
-- `pct`;
-- `pveam`;
-- `pvesm`;
-- `pvesh`;
-- `pveversion`;
-- `whiptail`.
+It requires normal Proxmox host tools including `pct`, `pveam`, `pvesm`,
+`pvesh`, `pveversion`, and `whiptail`.
 
 The launcher:
 
@@ -139,9 +132,8 @@ The launcher:
 16. reports the administration URL on port 81.
 
 Default resources are 2 CPU cores, 4096 MiB RAM, and a 16 GiB root disk.
-
-Nesting and keyctl are not enabled by the launcher. Real runtime testing has
-shown that Nginx Proxy Manager does not require them.
+Nesting and keyctl are not enabled by the launcher; runtime testing confirmed
+that Nginx Proxy Manager does not require them.
 
 Template storage is intentionally not a normal installer question. The launcher
 prefers an active `vztmpl` storage already containing a Debian 13 AMD64
@@ -160,7 +152,7 @@ The container installer:
 3. creates the dedicated `npm` system user/group;
 4. installs Node.js 22 and Yarn Classic 1.22.22;
 5. builds the pinned Certbot Python environment;
-6. installs project-owned native service/maintenance tooling;
+6. installs project-owned native build/preparation/health tooling;
 7. builds the pinned official OpenResty environment;
 8. fetches and verifies the exact NPM source commit and selected source blobs;
 9. compiles frontend locales and the production frontend;
@@ -185,14 +177,9 @@ The official base image compiles OpenResty rather than using Debian's stock
 Nginx package. The native builder therefore reproduces the pinned official
 configuration instead of substituting `apt install nginx`.
 
-Important retained features include:
-
-- HTTP/2 and HTTP/3 modules;
-- stream modules and SSL preread;
-- Lua integration;
-- dynamic GeoIP2 module;
-- mail support;
-- official proxy/temp/cache path behavior.
+Important retained features include HTTP/2 and HTTP/3 modules, stream and SSL
+preread, Lua integration, dynamic GeoIP2, mail support, and official proxy/temp
+/cache path behavior.
 
 LuaRocks is invoked through its absolute `/usr/local/bin/luarocks` path so
 Proxmox execution environments with a reduced `PATH` cannot break the build.
@@ -203,14 +190,10 @@ Both long-running services run as `npm:npm`, not root.
 
 ### Backend service
 
-`nginx-proxy-manager-backend.service`:
-
-- runs Node from the active versioned release;
-- uses `Restart=on-failure`;
-- uses `NoNewPrivileges=true`;
-- uses `ProtectSystem=strict` and related systemd hardening;
-- uses `PrivateTmp=true`;
-- has only `CAP_NET_BIND_SERVICE` in its ambient/bounding capability sets.
+`nginx-proxy-manager-backend.service` runs Node from the active versioned
+release, uses `Restart=on-failure`, `NoNewPrivileges=true`,
+`ProtectSystem=strict`, `PrivateTmp=true`, and related hardening. Its ambient and
+bounding capability sets contain only `CAP_NET_BIND_SERVICE`.
 
 The capability is required because upstream NPM itself invokes
 `/usr/sbin/nginx -t` and `nginx -s reload` during proxy/certificate workflows.
@@ -229,15 +212,14 @@ than granting the backend write access to `/etc/nginx`.
 
 ### OpenResty service
 
-`nginx-proxy-manager-nginx.service`:
+`nginx-proxy-manager-nginx.service` runs OpenResty as `npm:npm`, validates its
+configuration before start, has only `CAP_NET_BIND_SERVICE` for ports 80/81/443,
+uses `PrivateTmp=true` with the same service-owned `/tmp/nginx` backing path,
+uses the shared `/run/nginx` runtime directory, restarts on failure, and retains
+strict filesystem/systemd hardening.
 
-- runs OpenResty as `npm:npm`;
-- validates configuration before start;
-- has only `CAP_NET_BIND_SERVICE` for ports 80/81/443;
-- uses `PrivateTmp=true` with the same service-owned `/tmp/nginx` backing path;
-- uses the shared `/run/nginx` runtime directory;
-- restarts on failure;
-- retains strict filesystem/systemd hardening.
+Neither service has a write allowance for a project backup directory because
+backup/restore tooling is not part of the current supported runtime.
 
 ## First administrator and authentication
 
@@ -246,24 +228,17 @@ The adaptation does not set `INITIAL_ADMIN_EMAIL` or
 `INITIAL_ADMIN_PASSWORD`, does not invent credentials, and never prints a
 default administrator password.
 
-Real clean-install testing has confirmed:
-
-- the first-run wizard appears and completes;
-- no default credentials exist;
-- administrators can be created and removed;
-- TOTP two-factor authentication enrollment and login work.
+Real clean-install testing confirmed the first-run wizard, absence of default
+credentials, administrator creation/removal, and TOTP two-factor authentication.
 
 ## Database and persistent state
 
-SQLite is the default native database path and remains at:
-
-```text
-/data/database.sqlite
-```
+SQLite is the default native database path and remains at
+`/data/database.sqlite`.
 
 NPM also contains upstream support for MySQL/MariaDB and PostgreSQL, but this
-adaptation currently validates SQLite as the native default. External database
-modes must not be advertised as runtime-tested until exercised explicitly.
+adaptation validates SQLite as the native default. External database modes must
+not be advertised as runtime-tested unless separately exercised.
 
 Persistent application paths include:
 
@@ -275,18 +250,17 @@ Persistent application paths include:
 Protected adaptation paths include:
 
 - `/etc/nginx-proxy-manager/environment`;
-- `/etc/nginx-proxy-manager/installation.json`;
-- `/var/backups/nginx-proxy-manager`.
+- `/etc/nginx-proxy-manager/installation.json`.
 
-Real testing has confirmed that application-created proxy hosts and Let's
-Encrypt state survive a full CT reboot.
+Real testing confirmed that application-created proxy hosts and Let's Encrypt
+state survive a full CT reboot and service restarts.
 
 ## Certificate behavior
 
 The first real Let's Encrypt test exposed three native-systemd compatibility
 requirements before Certbot could run: backend low-port capability, the backend
-private `/tmp/nginx` mapping, and the read-only-safe `error_log off` compatibility
-target described above.
+private `/tmp/nginx` mapping, and the read-only-safe `error_log off`
+compatibility target described above.
 
 After those fixes, Certbot 5.6.0 reached the production Let's Encrypt ACME API.
 An initial registration using the intentionally fake `test@example.com` user
@@ -298,111 +272,77 @@ A subsequent fresh install from the development branch, with the fixes already
 integrated, successfully issued production Let's Encrypt certificates for three
 real subdomains without manual runtime patching.
 
-## Runtime validation completed so far
+Certificate import/download, DNS challenge behavior, renewal, and service
+persistence are covered by the Application feature matrix and are recorded as
+PASSED there.
 
-Real validation has been performed on Proxmox VE 9.2.9, kernel 7.0.14-9-pve,
-with Debian 13.6 AMD64 unprivileged LXC instances.
+## Runtime validation status
 
-Confirmed passing paths include:
+Real validation was performed on Proxmox VE 9.2.9, kernel 7.0.14-9-pve, with
+Debian 13.6 AMD64 unprivileged LXC instances.
 
-- fresh native Default Install;
-- no Docker/Podman runtime installed;
-- Node.js/Yarn/OpenResty/native frontend/backend build;
-- SQLite initialization and official migrations;
-- backend and OpenResty systemd startup;
-- listeners on 3000/80/81/443;
-- native health check;
-- complete CT reboot with nesting disabled;
-- persistent proxy/certificate/application data across reboot;
-- first-run setup with no default credentials;
-- administrator creation/removal;
-- TOTP authentication;
-- runtime API version `2.15.1`;
-- GUI footer version `v2.15.1` with no false update banner;
-- HTTP upstream proxying;
-- external HTTPS termination with Let's Encrypt;
-- Force SSL;
-- WebSocket proxying;
-- production Let's Encrypt HTTP/webroot issuance for multiple real subdomains.
+The maintainer confirmed the complete supported matrices as PASSED:
 
-The authoritative status remains `docs/RUNTIME-TEST-PLAN.md`; do not infer a
-PASS for an item that is still marked `NOT RUN` or `RETEST` there.
+- Container creation;
+- Build and service;
+- Proxmox branding;
+- Application feature.
 
-## Remaining release gates
+This includes Default and Advanced installer paths, DHCP/static networking,
+validation cases, native builds and services, restart/recovery behavior,
+first-run authentication, HTTP/HTTPS/WebSocket proxying, access lists, Force
+SSL, certificate import, HTTP and DNS certificate workflows, renewal, stream,
+HTTP/3, logs, reboot/service persistence, correct v2.15.1 reporting, and the
+branding/tag checks.
 
-Important remaining runtime work includes, where applicable:
+The authoritative detailed record is `docs/RUNTIME-TEST-PLAN.md`.
 
-- custom/static/Advanced installer paths and validation cases;
-- explicit HTTPS upstream/backend proxying;
-- access lists;
-- certificate import;
-- DNS challenge plugin flow;
-- certificate renewal;
-- stream proxying;
-- HTTP/3 validation;
-- deliberate service failure/restart recovery;
-- service-only proxy/certificate persistence checks;
-- application/OpenResty log validation;
-- backup and restore;
-- update, migration, rollback, and post-update health behavior;
-- Proxmox branding/tag validation.
+## Lifecycle scope
 
-## Backup and restore design
+Backup/restore and adaptation-level in-place update/rollback are not upstream
+NPM v2.15.1 application features and are not part of this release's supported
+surface. The project metadata is therefore `updateable: false`, the installer
+does not install lifecycle helper commands, and those functions are not runtime
+release gates.
 
-`npm-lxc-backup` is designed to:
+They may be designed later as separate ImmacularIT features. Such future work
+must define data ownership, consistent database handling, certificate/secret
+handling, failure recovery, migration compatibility, and its own runtime test
+plan before being advertised.
 
-- create an SQLite online backup;
-- capture persistent `/data` state while excluding rebuildable temporary data
-  and routine logs as appropriate;
-- capture `/etc/letsencrypt`;
-- capture adaptation configuration/Nginx templates needed for restoration;
-- create a root-only archive and SHA-256 checksum.
+## Upstream release maintenance model
 
-`npm-lxc-restore` verifies the archive/checksum, creates a safety backup, stops
-services, restores state, re-applies preparation/ownership, restarts the stack,
-and runs health checks.
+A new NPM release is handled as a new native adaptation cycle rather than by an
+automatic updater. For each upstream release:
 
-These lifecycle paths remain runtime-gated until the test matrix records them as
-passed.
+1. create a new development branch for the target NPM version;
+2. select the exact NPM tag and commit;
+3. inspect Dockerfile, backend/frontend dependency, Nginx, Certbot, migration,
+   and runtime changes;
+4. review the exact official base-image/OpenResty source revision;
+5. refresh version/blob pins only after reviewing diffs;
+6. run repository CI;
+7. build a fresh unprivileged Debian 13 AMD64 LXC on supported Proxmox VE;
+8. repeat the runtime validation required for the changed release;
+9. keep the PR Draft and `main` untouched until the required gates pass and the
+   maintainer explicitly approves promotion.
 
-## Native update workflow
-
-Updates are explicit and never install an unreviewed `latest` release.
-`npm-lxc-update` accepts a reviewed root-owned version manifest, creates a
-backup, builds a new versioned release, switches the active symlink, starts the
-official backend so migrations run, validates health, and retains rollback
-guidance.
-
-A changed official base-image/OpenResty pin requires a new adaptation review and
-must not be treated as an ordinary application-only update.
+A changed official base-image/OpenResty pin always requires a full adaptation
+review. Even an application-only update must not bypass exact-pin review and
+fresh runtime validation.
 
 ## Proxmox ownership boundaries
 
-Proxmox remains responsible for:
-
-- container ID and hostname;
-- bridge, DHCP/static address, gateway, VLAN, DNS, MTU, and MAC address;
-- `/etc/hosts` and `/etc/resolv.conf`;
-- storage and root filesystem;
-- container privilege/features;
-- firewall/NAT policy.
+Proxmox remains responsible for container ID and hostname; bridge, DHCP/static
+address, gateway, VLAN, DNS, MTU, and MAC address; `/etc/hosts` and
+`/etc/resolv.conf`; storage and root filesystem; container privilege/features;
+and firewall/NAT policy.
 
 The native installer reads resolver information only to render the Nginx
 resolver include. It does not overwrite Proxmox-owned networking files and does
 not install UFW.
 
-## Maintenance rules
+## Maintenance rule
 
-For every upstream NPM release:
-
-1. select the exact NPM tag and commit;
-2. inspect Dockerfile, backend/frontend dependency, Nginx, Certbot, and migration
-   changes;
-3. review the exact official base-image/OpenResty source revision;
-4. refresh version/blob pins only after reviewing diffs;
-5. run repository CI;
-6. build a fresh unprivileged Debian 13 AMD64 LXC on supported Proxmox VE;
-7. repeat the required runtime matrix;
-8. keep the PR Draft and `main` untouched until the required gates pass.
-
-Never claim a runtime test passed from repository review or CI alone.
+Never claim a runtime test passed from repository review or CI alone. Runtime
+status must come from real Proxmox evidence recorded in the runtime test plan.
