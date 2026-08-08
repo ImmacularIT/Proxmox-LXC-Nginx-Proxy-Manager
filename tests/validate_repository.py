@@ -107,10 +107,11 @@ assert launcher.index('pveam update || fatal "Failed to refresh the official Pro
 assert 'pveam download "$TEMPLATE_STORAGE" "$available" >&2' in launcher, (
     "Template download output must not contaminate the command-substitution result"
 )
-assert 'NESTING=' not in launcher, "Nginx Proxy Manager does not require an LXC nesting toggle"
-assert 'Nesting/keyctl:' not in launcher, "Nesting/keyctl must not appear in the configuration review"
+assert 'NESTING=' not in launcher, "Nesting is a fixed production default, not a user-facing toggle"
+assert 'Nesting/keyctl:' not in launcher, "Nesting/keyctl must not appear as a combined configuration review option"
 assert 'title "NESTING"' not in launcher, "Nesting must not be exposed as an installer dialog"
-assert 'nesting=1,keyctl=1' not in launcher, "Launcher must not enable unnecessary nesting/keyctl features"
+assert '--features nesting=1' in launcher, "Launcher must enable nesting for Proxmox/Systemd 257 compatibility"
+assert 'keyctl=1' not in launcher, "Launcher must keep keyctl disabled"
 assert 'hostname -I | awk' not in launcher, (
     "Launcher must not reparse the completion IP with nested awk positional parameters"
 )
