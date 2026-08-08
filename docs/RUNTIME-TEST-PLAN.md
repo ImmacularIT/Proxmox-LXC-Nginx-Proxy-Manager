@@ -76,17 +76,19 @@ Runtime-validation instances:
 
 ## Proxmox branding matrix
 
+All Proxmox branding checks below were confirmed as passing by the maintainer on 2026-08-08.
+
 | Test | Status | Evidence / notes |
 |---|---|---|
-| Project tags present | PASSED | 2026-08-08 maintainer confirmed this Proxmox branding check passed. |
-| User tags preserved | PASSED | 2026-08-08 maintainer confirmed this Proxmox branding check passed. |
-| `community-script` tag absent | PASSED | 2026-08-08 maintainer confirmed this Proxmox branding check passed. |
-| NPM logo renders | PASSED | 2026-08-08 maintainer confirmed this Proxmox branding check passed. |
-| ImmacularIT logo renders | PASSED | 2026-08-08 maintainer confirmed this Proxmox branding check passed. |
-| Official/adaptation distinction is clear | PASSED | 2026-08-08 maintainer confirmed this Proxmox branding check passed. |
-| All panel links work | PASSED | 2026-08-08 maintainer confirmed this Proxmox branding check passed. |
-| No Community promotional links | PASSED | 2026-08-08 maintainer confirmed this Proxmox branding check passed. |
-| Fallback text remains readable with images blocked | PASSED | 2026-08-08 maintainer confirmed this Proxmox branding check passed. |
+| Project tags present | PASSED | Maintainer-confirmed branding matrix pass. |
+| User tags preserved | PASSED | Maintainer-confirmed branding matrix pass. |
+| `community-script` tag absent | PASSED | Maintainer-confirmed branding matrix pass. |
+| NPM logo renders | PASSED | Maintainer-confirmed branding matrix pass. |
+| ImmacularIT logo renders | PASSED | Maintainer-confirmed branding matrix pass. |
+| Official/adaptation distinction is clear | PASSED | Maintainer-confirmed branding matrix pass. |
+| All panel links work | PASSED | Maintainer-confirmed branding matrix pass. |
+| No Community promotional links | PASSED | Maintainer-confirmed branding matrix pass. |
+| Fallback text remains readable with images blocked | PASSED | Maintainer-confirmed branding matrix pass. |
 
 ## Application feature matrix
 
