@@ -8,9 +8,10 @@ application into a native Debian 13 Proxmox LXC installation.
 > matrix has been exercised successfully on Proxmox VE 9.2.9 with Debian 13.6
 > AMD64. Container creation, native build/services, Proxmox branding, and the
 > application feature matrix all pass. The pull request remains a development
-> draft pending final release review. Backup/restore and adaptation-level
-> in-place update tooling are future ImmacularIT project options and are not
-> part of the current supported feature set.
+> draft pending final release review and a final current-head installation smoke
+> test after the Debian-template freshness logic was tightened. Backup/restore
+> and adaptation-level in-place update tooling are future ImmacularIT project
+> options and are not part of the current supported feature set.
 
 ## Pinned upstream
 
@@ -67,9 +68,17 @@ framework and does not send installation telemetry or usage data.
 
 Default Install prompts for container ID, hostname, LXC root-disk storage,
 bridge, DHCP or static IPv4, static gateway, and optional VLAN. Debian template
-cache placement is handled automatically: the launcher first reuses an active
-`vztmpl` storage that already contains a Debian 13 AMD64 template, otherwise it
-prefers Proxmox's conventional `local` storage, then the first active
+handling is automatic. After the user approves the CT configuration, the
+launcher refreshes the official Proxmox appliance catalog and determines the
+newest available Debian 13 AMD64 standard template. It reuses that exact cached
+template when present. If the newest cached Debian 13 template is older than the
+current catalog version, the launcher downloads the newer catalog template and
+uses it for the new CT. A cached template newer than the refreshed catalog is
+not replaced by an older one. Existing older template files are not deleted.
+
+Template-cache storage is also selected automatically: prefer a storage already
+holding the exact newest template, then an existing Debian 13 template cache,
+then Proxmox's conventional `local` storage, then the first active
 `vztmpl`-capable storage. Administrators can override this internal choice with
 `NPM_TEMPLATE_STORAGE=<storage>` when launching the script; it is not exposed as
 a normal installer dialog.
@@ -160,14 +169,15 @@ added later as separately designed and validated ImmacularIT features.
 Repository checks cover Bash and JSON syntax, systemd units, required metadata,
 version pins, Docker-derived source markers, branding PNG signatures, forbidden
 nested-runtime installation commands, moving upstream branch URLs, explicit
-no-telemetry launcher/installer invariants, automatic template-storage handling,
-no unnecessary LXC nesting/keyctl features, AMD64-only target enforcement,
-certificate-workflow compatibility, lifecycle-scope invariants, and obvious
-private-key or token patterns.
+no-telemetry launcher/installer invariants, latest Debian-template catalog
+selection and download invariants, no unnecessary LXC nesting/keyctl features,
+AMD64-only target enforcement, certificate-workflow compatibility,
+lifecycle-scope invariants, and obvious private-key or token patterns.
 
 Real Proxmox validation on PVE 9.2.9 / Debian 13.6 AMD64 has completed the
-supported v2.15.1 runtime plan: Container creation, Build and service, Proxmox
-branding, and Application feature matrices are all recorded as PASSED. See
+supported v2.15.1 application/runtime matrices. Because the host-side template
+freshness path was changed afterward, one final fresh installation from the
+current branch head is required before promotion. See
 [docs/RUNTIME-TEST-PLAN.md](docs/RUNTIME-TEST-PLAN.md) for the recorded evidence.
 
 ## Project identity
