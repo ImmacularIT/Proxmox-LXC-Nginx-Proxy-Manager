@@ -24,7 +24,7 @@ Runtime-validation instances:
 - 2026-08-08: same PVE/template/privilege model; fresh Default Install CT 901; DHCP IPv4 192.168.1.113. This clean run stopped during the OpenResty preparation stage when the LuaRocks executable was installed under `/usr/local/bin` but then looked up through an environment-dependent `PATH`.
 - 2026-08-08: same PVE/template/privilege model; subsequent fresh Default Install CT 901 completed end-to-end without installer errors after the LuaRocks, OpenResty readiness, launcher completion, installer-UX, template-storage, nesting/keyctl, and runtime-version fixes. A post-install `/usr/local/sbin/npm-lxc-healthcheck` invocation passed every native health check. Direct `pct exec 901 -- npm-lxc-healthcheck` initially failed only because Proxmox's direct command PATH omitted `/usr/local/sbin`; the helper itself was present and healthy. Follow-up commit `d3b6e01dde02d1ee57215e02ccc4b0583c2cc91f` exposes the user-facing administration helpers through `/usr/local/bin` as well. The same CT then survived `pct reboot 901` with nesting disabled: Proxmox emitted its generic Systemd 257 nesting warning, the task completed, CT 901 returned to `running`, the complete native health check passed again, and DHCP assigned 192.168.1.117.
 - 2026-08-08: a new unprivileged Debian 13.6 CT 901 received DHCP IPv4 192.168.1.118 and was used for the first real Let's Encrypt HTTP-challenge test. Runtime tracing exposed three native-systemd compatibility requirements before Certbot could run: the unprivileged backend needs `CAP_NET_BIND_SERVICE` for upstream's child `nginx -t`, the backend's `PrivateTmp` namespace needs the official `/tmp/nginx` path bound to its service-owned cache directory, and upstream's `-g "error_log off;"` test requires a read-only-safe `/etc/nginx/nginx/off -> /dev/null` compatibility target. After those fixes, Certbot 5.6.0 reached the production Let's Encrypt ACME API successfully. The first ACME registration was then correctly rejected because the deliberately fake NPM account email `test@example.com` uses the forbidden `example.com` domain; replacing it with a real email allowed certificate issuance for `oiko.iclust.se` to succeed.
-- 2026-08-08: follow-up fresh clean installation from the current development branch, with the ACME/systemd compatibility fixes integrated rather than patched manually. The maintainer then completed a real Let's Encrypt HTTP-challenge test for three real subdomains and certificate issuance succeeded for all three. This confirms the certificate-path fixes work as part of a clean install and are not artifacts of the earlier patched test container. One tested proxy host had WebSockets Support enabled and the proxied application worked. Another terminated external HTTPS with a Let's Encrypt certificate, had Force SSL enabled, and successfully proxied to an internal HTTP backend on port 8080. The same clean runtime displayed the correct `v2.15.1` GUI footer without a false update banner, supported administrator creation and removal, successfully enrolled and used TOTP two-factor authentication, presented the official first-run setup wizard on initial GUI access, and required creation of the first administrator because no default credentials were present.
+- 2026-08-08: follow-up fresh clean installation from the current development branch, with the ACME/systemd compatibility fixes integrated rather than patched manually. The maintainer then completed a real Let's Encrypt HTTP-challenge test for three real subdomains and certificate issuance succeeded for all three. This confirms the certificate-path fixes work as part of a clean install and are not artifacts of the earlier patched test container. One tested proxy host had WebSockets Support enabled and the proxied application worked. Another terminated external HTTPS with a Let's Encrypt certificate, had Force SSL enabled, and successfully proxied to an internal HTTP backend on port 8080. The same clean runtime displayed the correct `v2.15.1` GUI footer without a false update banner, supported administrator creation and removal, successfully enrolled and used TOTP two-factor authentication, presented the official first-run setup wizard on initial GUI access, and required creation of the first administrator because no default credentials were present. The maintainer also confirmed the complete Proxmox branding matrix passed.
 
 ## Container creation matrix
 
@@ -78,15 +78,15 @@ Runtime-validation instances:
 
 | Test | Status | Evidence / notes |
 |---|---|---|
-| Project tags present | NOT RUN | |
-| User tags preserved | NOT RUN | |
-| `community-script` tag absent | NOT RUN | |
-| NPM logo renders | NOT RUN | |
-| ImmacularIT logo renders | NOT RUN | |
-| Official/adaptation distinction is clear | NOT RUN | |
-| All panel links work | NOT RUN | |
-| No Community promotional links | NOT RUN | |
-| Fallback text remains readable with images blocked | NOT RUN | |
+| Project tags present | PASSED | 2026-08-08 maintainer confirmed this Proxmox branding check passed. |
+| User tags preserved | PASSED | 2026-08-08 maintainer confirmed this Proxmox branding check passed. |
+| `community-script` tag absent | PASSED | 2026-08-08 maintainer confirmed this Proxmox branding check passed. |
+| NPM logo renders | PASSED | 2026-08-08 maintainer confirmed this Proxmox branding check passed. |
+| ImmacularIT logo renders | PASSED | 2026-08-08 maintainer confirmed this Proxmox branding check passed. |
+| Official/adaptation distinction is clear | PASSED | 2026-08-08 maintainer confirmed this Proxmox branding check passed. |
+| All panel links work | PASSED | 2026-08-08 maintainer confirmed this Proxmox branding check passed. |
+| No Community promotional links | PASSED | 2026-08-08 maintainer confirmed this Proxmox branding check passed. |
+| Fallback text remains readable with images blocked | PASSED | 2026-08-08 maintainer confirmed this Proxmox branding check passed. |
 
 ## Application feature matrix
 
