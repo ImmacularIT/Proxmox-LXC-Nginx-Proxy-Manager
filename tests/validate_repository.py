@@ -114,11 +114,20 @@ for marker in [
     "service identity enforced by systemd",
 ]:
     assert marker in installer, f"Missing installer marker: {marker}"
+assert '[[ "$(dpkg --print-architecture)" == "amd64" ]] || fatal "AMD64 is required"' in installer, (
+    "Container installer must enforce the AMD64-only project target"
+)
+assert "ARM64 is not enabled" not in installer, "Installer must not carry a future ARM64 enablement gate"
 assert "FUNCTIONS_FILE_PATH" not in installer
 assert "msg_info" not in installer
 assert "msg_ok" not in installer
 assert "msg_error" not in installer
 assert "%s: " in installer, "Status labels must be separated from live command output with a colon"
+
+runtime_plan = (ROOT / "docs/RUNTIME-TEST-PLAN.md").read_text()
+assert "## ARM64 gate" not in runtime_plan, "ARM64 is outside this project's runtime test scope"
+readme = (ROOT / "README.md").read_text()
+assert "complete ARM64 build and runtime test" not in readme, "README must not advertise a future ARM64 gate"
 
 # Neither host-side container creation nor container-side installation may
 # contact, advertise, or report diagnostics to an unrelated script service.
@@ -203,6 +212,10 @@ assert 'helper_link="/usr/local/bin/npm-lxc-${admin_helper}"' in prepare
 assert 'ln -sfn "$helper_source" "$helper_link"' in prepare, (
     "User-facing administration helpers must be reachable through /usr/local/bin for pct exec"
 )
+assert '/etc/nginx/nginx' in prepare
+assert 'ln -s /dev/null "$nginx_test_log"' in prepare, (
+    "Upstream nginx test log compatibility target must remain a /dev/null symlink"
+)
 
 # Production application source must use immutable commits, not mutable branches.
 assert "NginxProxyManager/nginx-proxy-manager/main" not in production_shell
@@ -222,6 +235,16 @@ for unit in (ROOT / "systemd").glob("*.service"):
     assert "ExecStartPre=+/usr/local/sbin/npm-lxc-prepare" in text
     assert "StartLimitIntervalSec=60" in text
     assert "StartLimitBurst=5" in text
+
+backend_unit = (ROOT / "systemd/nginx-proxy-manager-backend.service").read_text()
+assert backend_unit.count("AmbientCapabilities=CAP_NET_BIND_SERVICE") == 1
+assert backend_unit.count("CapabilityBoundingSet=CAP_NET_BIND_SERVICE") == 1
+assert "CacheDirectory=nginx/tmp" in backend_unit
+assert "CacheDirectoryMode=0750" in backend_unit
+assert "BindPaths=/var/cache/nginx/tmp:/tmp/nginx" in backend_unit
+assert "/etc/nginx " not in backend_unit and not any(
+    token == "/etc/nginx" for token in re.findall(r"\S+", backend_unit)
+), "Backend sandbox must not gain broad write access to /etc/nginx"
 
 nginx_unit = (ROOT / "systemd/nginx-proxy-manager-nginx.service").read_text()
 assert "CacheDirectory=nginx/tmp" in nginx_unit, "Nginx private temp backing directory missing"
