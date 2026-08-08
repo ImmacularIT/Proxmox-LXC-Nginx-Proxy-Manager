@@ -18,6 +18,7 @@ required_files = [
     "scripts/npm-healthcheck.sh",
     "systemd/nginx-proxy-manager-backend.service",
     "systemd/nginx-proxy-manager-nginx.service",
+    "tests/validate_template_selection.sh",
     "docs/PROJECT-HANDOFF.md",
     "docs/PROXMOX-BRANDING.md",
     "docs/RUNTIME-TEST-PLAN.md",
@@ -36,6 +37,7 @@ for relative in [
 workflow = (ROOT / ".github/workflows/syntax.yml").read_text()
 assert "actions/checkout@11d5960a326750d5838078e36cf38b85af677262" in workflow
 assert "actions/checkout@v" not in workflow
+assert "bash tests/validate_template_selection.sh" in workflow
 
 metadata = json.loads((ROOT / "json/nginx-proxy-manager.json").read_text())
 for key in {
@@ -82,6 +84,9 @@ for marker in [
     "find_or_download_template",
     "pct create",
     "pveam update",
+    "LATEST_TEMPLATE=$(pveam available --section system",
+    'TEMPLATE_STORAGE="$(resolve_template_storage "$LATEST_TEMPLATE")"',
+    'TEMPLATE="$(find_or_download_template "$LATEST_TEMPLATE")"',
     "set_project_description",
     "nginx-proxy-manager;reverse-proxy;immacularit;webserver",
     "unofficial native Proxmox LXC adaptation",
@@ -93,8 +98,14 @@ assert 'pvesm status --content vztmpl' in launcher, "Template storage must be re
 assert 'NPM_TEMPLATE_STORAGE' in launcher, "Administrative template-storage override is missing"
 assert '"TEMPLATE STORAGE"' not in launcher, "Template cache placement must not be a normal installer dialog"
 assert "Template storage:" not in launcher, "Template cache placement must not appear in the user configuration review"
-assert launcher.index('confirm_configuration || exit 0') < launcher.index('TEMPLATE_STORAGE="$(resolve_template_storage)"'), (
-    "Template cache placement should be resolved only after user-facing CT settings are approved"
+assert launcher.index('confirm_configuration || exit 0') < launcher.index(
+    'TEMPLATE_STORAGE="$(resolve_template_storage "$LATEST_TEMPLATE")"'
+), "Template cache placement should be resolved only after user-facing CT settings are approved"
+assert launcher.index('pveam update || fatal "Failed to refresh the official Proxmox appliance catalog"') < launcher.index(
+    'LATEST_TEMPLATE=$(pveam available --section system'
+), "The official catalog must refresh before selecting the latest Debian template"
+assert 'pveam download "$TEMPLATE_STORAGE" "$available" >&2' in launcher, (
+    "Template download output must not contaminate the command-substitution result"
 )
 assert 'NESTING=' not in launcher, "Nginx Proxy Manager does not require an LXC nesting toggle"
 assert 'Nesting/keyctl:' not in launcher, "Nesting/keyctl must not appear in the configuration review"
@@ -136,6 +147,7 @@ assert "## ARM64 gate" not in runtime_plan, "ARM64 is outside this project's run
 assert "## Backup, restore, and update matrix" not in runtime_plan, (
     "Future lifecycle tooling must not block the supported v2.15.1 runtime matrix"
 )
+assert "## Final release-candidate smoke test" in runtime_plan
 assert "## Future lifecycle features" in runtime_plan
 readme = (ROOT / "README.md").read_text()
 assert "complete ARM64 build and runtime test" not in readme, "README must not advertise a future ARM64 gate"
