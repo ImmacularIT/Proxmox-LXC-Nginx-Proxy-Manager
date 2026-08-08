@@ -12,6 +12,7 @@ Target environment:
 - Proxmox VE 9.x;
 - unprivileged Debian 13 LXC;
 - Debian 13.6 template where available;
+- AMD64 architecture;
 - disposable storage and a pre-install snapshot;
 - test DNS names routed to the container;
 - inbound TCP 80 and TCP/UDP 443 where certificate and HTTP/3 testing requires it;
@@ -23,7 +24,7 @@ Runtime-validation instances:
 - 2026-08-08: same PVE/template/privilege model; fresh Default Install CT 901; DHCP IPv4 192.168.1.113. This clean run stopped during the OpenResty preparation stage when the LuaRocks executable was installed under `/usr/local/bin` but then looked up through an environment-dependent `PATH`.
 - 2026-08-08: same PVE/template/privilege model; subsequent fresh Default Install CT 901 completed end-to-end without installer errors after the LuaRocks, OpenResty readiness, launcher completion, installer-UX, template-storage, nesting/keyctl, and runtime-version fixes. A post-install `/usr/local/sbin/npm-lxc-healthcheck` invocation passed every native health check. Direct `pct exec 901 -- npm-lxc-healthcheck` initially failed only because Proxmox's direct command PATH omitted `/usr/local/sbin`; the helper itself was present and healthy. Follow-up commit `d3b6e01dde02d1ee57215e02ccc4b0583c2cc91f` exposes the user-facing administration helpers through `/usr/local/bin` as well. The same CT then survived `pct reboot 901` with nesting disabled: Proxmox emitted its generic Systemd 257 nesting warning, the task completed, CT 901 returned to `running`, the complete native health check passed again, and DHCP assigned 192.168.1.117.
 - 2026-08-08: a new unprivileged Debian 13.6 CT 901 received DHCP IPv4 192.168.1.118 and was used for the first real Let's Encrypt HTTP-challenge test. Runtime tracing exposed three native-systemd compatibility requirements before Certbot could run: the unprivileged backend needs `CAP_NET_BIND_SERVICE` for upstream's child `nginx -t`, the backend's `PrivateTmp` namespace needs the official `/tmp/nginx` path bound to its service-owned cache directory, and upstream's `-g "error_log off;"` test requires a read-only-safe `/etc/nginx/nginx/off -> /dev/null` compatibility target. After those fixes, Certbot 5.6.0 reached the production Let's Encrypt ACME API successfully. The first ACME registration was then correctly rejected because the deliberately fake NPM account email `test@example.com` uses the forbidden `example.com` domain; replacing it with a real email allowed certificate issuance for `oiko.iclust.se` to succeed.
-- 2026-08-08: follow-up fresh clean installation from the current development branch, with the ACME/systemd compatibility fixes integrated rather than patched manually. The maintainer then completed a real Let's Encrypt HTTP-challenge test for three real subdomains and certificate issuance succeeded for all three. This confirms the certificate-path fixes work as part of a clean install and are not artifacts of the earlier patched test container. One tested proxy host had WebSockets Support enabled and the proxied application worked. Another terminated external HTTPS with a Let's Encrypt certificate, had Force SSL enabled, and successfully proxied to an internal HTTP backend on port 8080. The same clean runtime displayed the correct `v2.15.1` GUI footer without a false update banner, supported administrator creation and removal, and successfully enrolled and used TOTP two-factor authentication.
+- 2026-08-08: follow-up fresh clean installation from the current development branch, with the ACME/systemd compatibility fixes integrated rather than patched manually. The maintainer then completed a real Let's Encrypt HTTP-challenge test for three real subdomains and certificate issuance succeeded for all three. This confirms the certificate-path fixes work as part of a clean install and are not artifacts of the earlier patched test container. One tested proxy host had WebSockets Support enabled and the proxied application worked. Another terminated external HTTPS with a Let's Encrypt certificate, had Force SSL enabled, and successfully proxied to an internal HTTP backend on port 8080. The same clean runtime displayed the correct `v2.15.1` GUI footer without a false update banner, supported administrator creation and removal, successfully enrolled and used TOTP two-factor authentication, presented the official first-run setup wizard on initial GUI access, and required creation of the first administrator because no default credentials were present.
 
 ## Container creation matrix
 
@@ -92,8 +93,8 @@ Runtime-validation instances:
 | Test | Status | Evidence / notes |
 |---|---|---|
 | Administration interface on port 81 | PASSED | Working CT returned HTTP 200 on port 81; earlier browser GUI login/dashboard navigation also succeeded. |
-| First-run setup wizard | NOT RUN | Preserve as NOT RUN until the wizard path itself is explicitly confirmed/recorded on a clean empty data path. |
-| No invented/default credentials | NOT RUN | |
+| First-run setup wizard | PASSED | 2026-08-08 fresh clean-install GUI test: the official setup wizard appeared on first access to an empty installation and completed successfully. |
+| No invented/default credentials | PASSED | 2026-08-08 fresh clean-install GUI test: no default administrator credentials existed; the first administrator had to be created through the setup wizard. |
 | Create administrator | PASSED | 2026-08-08 fresh clean-install GUI test: administrator creation and removal both worked normally. |
 | Two-factor authentication (TOTP) | PASSED | 2026-08-08 fresh clean-install GUI test: TOTP two-factor authentication enrollment and authentication worked successfully. |
 | Runtime installed version metadata | PASSED | 2026-08-08 CT 901: `package.json` returned `2.15.1`; direct backend `/` returned version 2.15.1; `/version/check` returned `current: v2.15.1`, `latest: v2.15.1`, `update_available: false`. This validates the staged runtime version-stamp fix. |
@@ -130,9 +131,3 @@ Runtime-validation instances:
 | Atomic active-release switch | NOT RUN | |
 | Post-update health checks | NOT RUN | |
 | Failed-update rollback procedure | NOT RUN | |
-
-## ARM64 gate
-
-ARM64 remains disabled in launcher metadata. Enable it only after repeating the
-complete build, startup, proxy, certificate, reboot, backup, restore, and update
-matrix on an ARM64 Proxmox host or equivalent validated environment.
