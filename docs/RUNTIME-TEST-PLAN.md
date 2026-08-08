@@ -99,7 +99,7 @@ Runtime-validation instances:
 | GUI displayed version / false update banner | RETEST | Backend/version API defect is closed, but preserve the browser-visible banner check until the GUI is explicitly observed after the corrected clean install. |
 | Create HTTP proxy host | NOT RUN | |
 | Proxy to HTTPS backend | NOT RUN | |
-| WebSocket proxying | NOT RUN | |
+| WebSocket proxying | PASSED | 2026-08-08 fresh clean-install real-subdomain test: WebSockets Support was enabled on the first tested proxy host and the proxied application worked successfully through NPM. |
 | Access list behavior | NOT RUN | |
 | HTTP-to-HTTPS redirect | NOT RUN | |
 | Certificate import | NOT RUN | |
