@@ -20,6 +20,19 @@ is_true() {
   esac
 }
 
+# Keep service-internal preparation under /usr/local/sbin, while exposing the
+# user-facing administration helpers through /usr/local/bin as well. Proxmox
+# `pct exec <ctid> -- <command>` may omit /usr/local/sbin from its command PATH.
+for admin_helper in healthcheck backup restore update; do
+  helper_source="/usr/local/sbin/npm-lxc-${admin_helper}"
+  helper_link="/usr/local/bin/npm-lxc-${admin_helper}"
+  [[ -x "$helper_source" ]] || {
+    echo "Missing administration helper: ${helper_source}" >&2
+    exit 1
+  }
+  ln -sfn "$helper_source" "$helper_link"
+done
+
 install -d -o "$NPM_USER" -g "$NPM_GROUP" -m 0750 \
   /data \
   /data/nginx \
