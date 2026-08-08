@@ -71,7 +71,7 @@ Runtime-validation instances:
 | Health helper passes | PASSED | 2026-08-08 latest clean CT 901: `/usr/local/sbin/npm-lxc-healthcheck` reported backend and Nginx active, OpenResty configuration valid, ports 3000/80/81/443 listening, administration UI responding, release marker present, and no Docker runtime installed. |
 | Administration helpers reachable by short `pct exec` command | RETEST | Latest installed CT predates helper-link commit `d3b6e01dde02d1ee57215e02ccc4b0583c2cc91f`; absolute `/usr/local/sbin/npm-lxc-healthcheck` works. Current branch creates `/usr/local/bin` links for healthcheck/backup/restore/update so `pct exec <CTID> -- npm-lxc-healthcheck` should work on the next install. |
 | Full container reboot survives | PASSED | 2026-08-08 CT 901: `pct reboot 901` completed with only Proxmox's generic `Systemd 257 detected. You may need to enable nesting.` warning. Nesting remained disabled. After reboot `pct status 901` reported `running`, both services were active, all ports and OpenResty configuration passed health checks, the administration UI responded, and no Docker runtime was present. |
-| Persistent data survives reboot | NOT RUN | Reboot confirmed service/release persistence; application-created proxy/certificate data still needs an explicit before/after persistence test. |
+| Persistent data survives reboot | PASSED | 2026-08-08 fresh clean-install runtime with real proxy hosts and Let's Encrypt certificates was rebooted; the maintainer confirmed the persisted application data remained intact and the configured services continued working without issues after the CT returned. |
 
 ## Proxmox branding matrix
 
