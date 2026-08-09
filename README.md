@@ -17,7 +17,7 @@ application into a native Debian 13 Proxmox LXC installation.
 
 ## Direct installation
 
-un this command as `root` in the Proxmox host shell:
+Run this command as `root` in the Proxmox host shell:
 
 ```bash
 bash <(curl -fsSL \
