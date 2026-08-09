@@ -65,7 +65,11 @@ no active user. This adaptation does not create default administrator
 credentials and does not set `INITIAL_ADMIN_EMAIL` or
 `INITIAL_ADMIN_PASSWORD`.
 
-Open `http://CONTAINER-IP:81` and complete the official wizard.
+Open:
+```text
+http://CONTAINER-IP:81
+```
+and complete the official wizard.
 
 ## Pinned upstream
 
