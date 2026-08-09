@@ -6,15 +6,6 @@ application into a native Debian 13 Proxmox LXC installation.
 
 <a href="https://www.buymeacoffee.com/eli66" target="_blank"><img src="http://public.jc21.com/github/by-me-a-coffee.png" alt="Buy Me A Coffee" style="height: 51px !important;width: 217px !important;" ></a>
 
-> **Release status:** the supported Nginx Proxy Manager v2.15.1 runtime matrix
-> has been exercised successfully on Proxmox VE 9.2.9 with Debian 13.6 AMD64.
-> Container creation, native build/services, Proxmox branding, the application
-> feature matrix, the final fresh-install health smoke test, and the final
-> nesting-enabled start/reboot smoke check all pass. The validated release was
-> promoted to `main` on 2026-08-08. Backup/restore and adaptation-level in-place
-> update tooling are future ImmacularIT project options and are not part of the
-> current supported feature set.
-
 ## Direct installation
 
 Run this command as `root` in the Proxmox host shell:
