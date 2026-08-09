@@ -15,48 +15,7 @@ application into a native Debian 13 Proxmox LXC installation.
 > update tooling are future ImmacularIT project options and are not part of the
 > current supported feature set.
 
-## Pinned upstream
-
-| Component | Version or revision |
-|---|---|
-| Nginx Proxy Manager | `v2.15.1` |
-| Nginx Proxy Manager commit | `76f09db610cfcaecf6d608a8947d6f75aa028870` |
-| Official `docker-nginx-full` source | `fe5ba055ed29033a619e9103bef5d8218fe1fab0` |
-| OpenResty | `1.29.2.5`, commit `2ec0f65e434c92e9f78fd5c3af601a6b286c6d2b` |
-| Node.js | `22.x` |
-| Yarn | `1.22.22` |
-| Certbot | `5.6.0` |
-| Lua / LuaRocks | `5.1.5` / `3.13.0` |
-| Base operating system | Debian 13 |
-| Target architecture | AMD64 |
-
-The installer fetches exact Git commits and validates release markers and
-selected Git blob IDs before building. It does not install from `develop`,
-`main`, `master`, or another moving application branch.
-
-## Native architecture
-
-The final container does not require Docker, Docker Compose, Podman,
-Kubernetes, or another nested container runtime. The Proxmox `nesting=1`
-container feature described below is an LXC compatibility setting; it does not
-mean a nested Docker/Podman/Kubernetes runtime is installed or used.
-
-- The official frontend is built with the pinned Yarn lockfile and served as
-  static files by OpenResty.
-- The official backend and Node dependencies are built into a versioned release
-  under `/opt/nginx-proxy-manager/releases/`.
-- The official OpenResty build flags, Lua integration, HTTP/3, stream support,
-  and GeoIP2 module are reproduced from the pinned `docker-nginx-full` source.
-- The backend runs as `nginx-proxy-manager-backend.service` on local port 3000.
-- OpenResty runs as `nginx-proxy-manager-nginx.service` on ports 80, 81, and 443.
-- SQLite is the initial supported database path and remains at
-  `/data/database.sqlite`.
-- `/data` and `/etc/letsencrypt` retain the official persistent-volume layout.
-- Both long-running services use the dedicated `npm` system account.
-
-See [docs/PROJECT-HANDOFF.md](docs/PROJECT-HANDOFF.md) for the complete Docker-to-LXC mapping.
-
-## Installation
+## Direct installation
 
 Run this directly on a Proxmox VE 9.x AMD64 host:
 
@@ -110,6 +69,47 @@ Current default resources are deliberately sized for the source build:
 
 This project targets AMD64 only. ARM64 support is not part of the project scope
 or runtime test plan.
+
+## Pinned upstream
+
+| Component | Version or revision |
+|---|---|
+| Nginx Proxy Manager | `v2.15.1` |
+| Nginx Proxy Manager commit | `76f09db610cfcaecf6d608a8947d6f75aa028870` |
+| Official `docker-nginx-full` source | `fe5ba055ed29033a619e9103bef5d8218fe1fab0` |
+| OpenResty | `1.29.2.5`, commit `2ec0f65e434c92e9f78fd5c3af601a6b286c6d2b` |
+| Node.js | `22.x` |
+| Yarn | `1.22.22` |
+| Certbot | `5.6.0` |
+| Lua / LuaRocks | `5.1.5` / `3.13.0` |
+| Base operating system | Debian 13 |
+| Target architecture | AMD64 |
+
+The installer fetches exact Git commits and validates release markers and
+selected Git blob IDs before building. It does not install from `develop`,
+`main`, `master`, or another moving application branch.
+
+## Native architecture
+
+The final container does not require Docker, Docker Compose, Podman,
+Kubernetes, or another nested container runtime. The Proxmox `nesting=1`
+container feature described below is an LXC compatibility setting; it does not
+mean a nested Docker/Podman/Kubernetes runtime is installed or used.
+
+- The official frontend is built with the pinned Yarn lockfile and served as
+  static files by OpenResty.
+- The official backend and Node dependencies are built into a versioned release
+  under `/opt/nginx-proxy-manager/releases/`.
+- The official OpenResty build flags, Lua integration, HTTP/3, stream support,
+  and GeoIP2 module are reproduced from the pinned `docker-nginx-full` source.
+- The backend runs as `nginx-proxy-manager-backend.service` on local port 3000.
+- OpenResty runs as `nginx-proxy-manager-nginx.service` on ports 80, 81, and 443.
+- SQLite is the initial supported database path and remains at
+  `/data/database.sqlite`.
+- `/data` and `/etc/letsencrypt` retain the official persistent-volume layout.
+- Both long-running services use the dedicated `npm` system account.
+
+See [docs/PROJECT-HANDOFF.md](docs/PROJECT-HANDOFF.md) for the complete Docker-to-LXC mapping.
 
 ## Ports
 
