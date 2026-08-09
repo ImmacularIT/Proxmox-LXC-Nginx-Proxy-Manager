@@ -58,6 +58,15 @@ Current default resources are deliberately sized for the source build:
 This project targets AMD64 only. ARM64 support is not part of the project scope
 or runtime test plan.
 
+## First run
+
+Nginx Proxy Manager `v2.15.1` presents a setup wizard when the database contains
+no active user. This adaptation does not create default administrator
+credentials and does not set `INITIAL_ADMIN_EMAIL` or
+`INITIAL_ADMIN_PASSWORD`.
+
+Open `http://CONTAINER-IP:81` and complete the official wizard.
+
 ## Pinned upstream
 
 | Component | Version or revision |
@@ -112,15 +121,6 @@ See [docs/PROJECT-HANDOFF.md](docs/PROJECT-HANDOFF.md) for the complete Docker-t
 Proxmox and the surrounding network remain responsible for firewall policy.
 The installer does not install UFW and does not rewrite hostname, resolver,
 `/etc/hosts`, IP addressing, gateway, bridge, VLAN, or Proxmox interface data.
-
-## First run
-
-Nginx Proxy Manager `v2.15.1` presents a setup wizard when the database contains
-no active user. This adaptation does not create default administrator
-credentials and does not set `INITIAL_ADMIN_EMAIL` or
-`INITIAL_ADMIN_PASSWORD`.
-
-Open `http://CONTAINER-IP:81` and complete the official wizard.
 
 ## Persistent and protected paths
 
