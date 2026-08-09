@@ -20,8 +20,7 @@ application into a native Debian 13 Proxmox LXC installation.
 Run this command as `root` in the Proxmox host shell:
 
 ```bash
-bash <(curl -fsSL \
-  https://raw.githubusercontent.com/ImmacularIT/Proxmox-LXC-Nginx-Proxy-Manager/main/ct/nginx-proxy-manager.sh)
+bash <(curl -fsSL https://raw.githubusercontent.com/ImmacularIT/Proxmox-LXC-Nginx-Proxy-Manager/main/ct/nginx-proxy-manager.sh)
 ```
 
 The launcher defaults all project self-fetches to `main`. `NPM_PROJECT_REF` can
